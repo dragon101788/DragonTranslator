@@ -1,6 +1,6 @@
 @echo off
 chcp 65001 >nul
-title Lexi Dev
+title 龙图腾翻译 Dev
 
 :: ---- PATH setup ----
 set "PATH=C:\Program Files\nodejs;%PATH%"
@@ -11,7 +11,7 @@ set "PATH=C:\Program Files (x86)\Windows Kits\10\bin\10.0.26100.0\x64;%PATH%"
 cd /d "%~dp0"
 
 echo ========================================
-echo   Lexi - Dev Mode
+echo   龙图腾翻译 - Dev Mode
 echo ========================================
 echo   Vite : http://localhost:5175
 echo ========================================

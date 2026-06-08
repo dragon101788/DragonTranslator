@@ -254,7 +254,7 @@ export default function SettingsDialog({ onClose }: SettingsDialogProps) {
                   全局快捷键
                 </h3>
                 <p className="text-sm text-lexi-text-muted">
-                  使用全局快捷键在任何应用中快速呼出 Lexi 翻译窗口。
+                  使用全局快捷键在任何应用中快速呼出 龙图腾翻译 窗口。
                 </p>
 
                 <div className="p-5 bg-lexi-input/50 rounded-xl border border-lexi-border text-center">

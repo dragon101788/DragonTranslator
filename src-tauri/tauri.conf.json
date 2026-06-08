@@ -1,8 +1,8 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "Lexi",
+  "productName": "龙图腾翻译",
   "version": "0.1.0",
-  "identifier": "com.lexi.desktop",
+  "identifier": "com.dragontec.translator",
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:5175",
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "Lexi",
+        "title": "龙图腾翻译",
         "label": "main",
         "width": 860,
         "height": 620,
