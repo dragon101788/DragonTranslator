@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Send, Loader2, X, ArrowLeftRight, StopCircle } from "lucide-react";
+import { Send, X, ArrowLeftRight, StopCircle } from "lucide-react";
 
 interface InputAreaProps {
   onTranslate: (text: string) => void;
@@ -49,15 +49,6 @@ export default function InputArea({
     textareaRef.current?.focus();
   }, []);
 
-  // Auto-resize textarea
-  useEffect(() => {
-    const el = textareaRef.current;
-    if (el) {
-      el.style.height = "auto";
-      el.style.height = Math.min(el.scrollHeight, 200) + "px";
-    }
-  }, [text]);
-
   const handleSubmit = useCallback(() => {
     if (!text.trim() || translating) return;
     onTranslate(text.trim());
@@ -83,7 +74,7 @@ export default function InputArea({
   };
 
   return (
-    <div className="flex flex-col h-full bg-lexi-card rounded-xl border border-lexi-border overflow-hidden">
+    <div className="flex flex-col h-full bg-lexi-card border border-lexi-border overflow-hidden">
       {/* Lang selector + controls bar */}
       <div className="flex items-center justify-between px-3 py-2 border-b border-lexi-border/50">
         <div className="flex items-center gap-2 text-sm">
@@ -137,52 +128,46 @@ export default function InputArea({
       </div>
 
       {/* Textarea */}
-      <textarea
-        ref={textareaRef}
-        value={text}
-        onChange={(e) => {
-          setText(e.target.value);
-          setCharCount(e.target.value.length);
-        }}
-        onKeyDown={handleKeyDown}
-        placeholder="输入要翻译的文本... Enter 翻译, Shift+Enter 换行"
-        className="flex-1 w-full bg-transparent text-lexi-text placeholder-lexi-text-muted/50 px-4 py-3 resize-none focus:outline-none text-sm leading-relaxed"
-        rows={1}
-        maxLength={5000}
-      />
+      <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+        <textarea
+          ref={textareaRef}
+          value={text}
+          onChange={(e) => {
+            setText(e.target.value);
+            setCharCount(e.target.value.length);
+          }}
+          onKeyDown={handleKeyDown}
+          placeholder="输入要翻译的文本... Enter 翻译, Shift+Enter 换行"
+          className="flex-1 w-full bg-transparent text-lexi-text placeholder-lexi-text-muted/50 px-4 py-3 resize-none focus:outline-none text-sm leading-relaxed overflow-y-auto"
+          rows={1}
+          maxLength={5000}
+        />
+      </div>
 
       {/* Submit / Stop buttons */}
-      <div className="flex items-center justify-between px-3 py-2">
-        <div className="text-xs text-lexi-text-muted">
+      <div className="flex items-center justify-between px-3 py-2 gap-2">
+        <div className="text-xs text-lexi-text-muted whitespace-nowrap">
           {translating && "流式输出中..."}
         </div>
-        <div className="flex items-center gap-2">
-          {translating && (
+        <div className="flex items-center gap-2 flex-shrink-0">
+          {translating ? (
             <button
               onClick={onStop}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-400 text-sm font-medium transition-all"
+              className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-400 text-sm font-medium transition-all whitespace-nowrap min-w-[90px] justify-center"
             >
               <StopCircle size={14} />
               <span>停止</span>
             </button>
+          ) : (
+            <button
+              onClick={handleSubmit}
+              disabled={!text.trim()}
+              className="flex items-center gap-2 px-4 py-1.5 rounded-lg bg-lexi-accent hover:bg-lexi-accent-hover disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-medium transition-all whitespace-nowrap min-w-[90px] justify-center"
+            >
+              <Send size={15} />
+              <span>翻译</span>
+            </button>
           )}
-          <button
-            onClick={handleSubmit}
-            disabled={!text.trim() || translating}
-            className="flex items-center gap-2 px-4 py-1.5 rounded-lg bg-lexi-accent hover:bg-lexi-accent-hover disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-medium transition-all"
-          >
-            {translating ? (
-              <>
-                <Loader2 size={15} className="animate-spin" />
-                <span>生成中</span>
-              </>
-            ) : (
-              <>
-                <Send size={15} />
-                <span>翻译</span>
-              </>
-            )}
-          </button>
         </div>
       </div>
     </div>

@@ -86,7 +86,7 @@ export default function OutputArea({
   // Loading: no content yet
   if (translating && !result) {
     return (
-      <div className="flex items-center justify-center h-full bg-lexi-card rounded-xl border border-lexi-border">
+      <div className="flex items-center justify-center h-full bg-lexi-card border border-lexi-border">
         <div className="flex flex-col items-center gap-3">
           <div className="w-8 h-8 border-2 border-lexi-accent/30 border-t-lexi-accent rounded-full animate-spin" />
           <span className="text-sm text-lexi-text-muted">正在翻译...</span>
@@ -97,7 +97,7 @@ export default function OutputArea({
 
   if (error) {
     return (
-      <div className="flex items-start gap-3 p-4 bg-red-500/10 border border-red-500/30 rounded-xl">
+      <div className="flex items-start gap-3 p-4 bg-red-500/10 border border-red-500/30">
         <AlertCircle size={18} className="text-red-400 flex-shrink-0 mt-0.5" />
         <div>
           <div className="text-sm font-medium text-red-400">翻译出错</div>
@@ -109,7 +109,7 @@ export default function OutputArea({
 
   if (!result) {
     return (
-      <div className="flex items-center justify-center h-full bg-lexi-card rounded-xl border border-lexi-border border-dashed">
+      <div className="flex items-center justify-center h-full bg-lexi-card border border-lexi-border border-dashed">
         <div className="text-center text-lexi-text-muted">
           <div className="text-3xl mb-2">✨</div>
           <div className="text-sm">选择智能体，输入文本，开始翻译</div>
@@ -120,7 +120,7 @@ export default function OutputArea({
   }
 
   return (
-    <div className="flex flex-col h-full bg-lexi-card rounded-xl border border-lexi-border overflow-hidden">
+    <div className="flex flex-col h-full bg-lexi-card border border-lexi-border overflow-hidden">
       {/* Content */}
       <div ref={scrollRef} className="flex-1 p-4 overflow-y-auto">
         <div className="markdown-body text-sm text-lexi-text">

@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useAgentStore } from "../stores/agentStore";
 import { useConfigStore } from "../stores/configStore";
 import { useHistoryStore } from "../stores/historyStore";
@@ -28,13 +28,21 @@ export function usePersistence() {
   const settings = useConfigStore((s) => s.settings);
   const records = useHistoryStore((s) => s.records);
 
-  // Load on mount
+  const loadedRef = useRef(false);
+
+  // Load on mount — must complete before first save
   useEffect(() => {
-    loadData();
+    let cancelled = false;
+    loadData().then(() => {
+      if (!cancelled) loadedRef.current = true;
+    });
+    return () => { cancelled = true; };
   }, []);
 
-  // Save on changes
+  // Save on changes — skip until initial load completes to avoid
+  // overwriting stored data with default values
   useEffect(() => {
+    if (!loadedRef.current) return;
     saveData();
   }, [agents, activeAgentId, providers, activeProviderId, settings, records]);
 

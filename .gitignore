@@ -26,3 +26,6 @@ dist-ssr
 # Rust / Tauri
 src-tauri/target/
 *.pdb
+
+# Local portable data (contains API keys)
+lexi-data.json

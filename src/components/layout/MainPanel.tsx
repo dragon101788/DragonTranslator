@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useState, useRef, useEffect } from "react";
 import InputArea from "../translation/InputArea";
 import OutputArea from "../translation/OutputArea";
 import { useTranslate } from "../../hooks/useTranslate";
@@ -38,6 +38,38 @@ export default function MainPanel({
 
   const activeAgent = getActiveAgent();
 
+  // Resizable split
+  const [splitRatio, setSplitRatio] = useState(0.5);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const draggingRef = useRef(false);
+
+  useEffect(() => {
+    const onMouseMove = (e: MouseEvent) => {
+      if (!draggingRef.current || !containerRef.current) return;
+      const rect = containerRef.current.getBoundingClientRect();
+      const offsetY = e.clientY - rect.top;
+      const ratio = Math.min(Math.max(offsetY / rect.height, 0.2), 0.8);
+      setSplitRatio(ratio);
+    };
+    const onMouseUp = () => {
+      draggingRef.current = false;
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    };
+    document.addEventListener("mousemove", onMouseMove);
+    document.addEventListener("mouseup", onMouseUp);
+    return () => {
+      document.removeEventListener("mousemove", onMouseMove);
+      document.removeEventListener("mouseup", onMouseUp);
+    };
+  }, []);
+
+  const handleBarDown = () => {
+    draggingRef.current = true;
+    document.body.style.cursor = "row-resize";
+    document.body.style.userSelect = "none";
+  };
+
   return (
     <div className="flex flex-col h-full bg-lexi-bg">
       {/* Agent info header */}
@@ -57,9 +89,9 @@ export default function MainPanel({
         )}
       </div>
 
-      {/* Translation area - Input/Output each half */}
-      <div className="flex-1 flex flex-col p-5 gap-4 min-h-0">
-        <div className="flex-1 min-h-0">
+      {/* Translation area - resizable Input/Output */}
+      <div ref={containerRef} className="flex-1 flex flex-col p-5 min-h-0">
+        <div style={{ flexGrow: splitRatio, minHeight: 0 }}>
           <InputArea
             onTranslate={handleTranslate}
             onStop={stop}
@@ -73,7 +105,15 @@ export default function MainPanel({
           />
         </div>
 
-        <div className="flex-1 min-h-0">
+        {/* Drag-to-resize bar */}
+        <div
+          className="flex items-center justify-center h-2 cursor-row-resize flex-shrink-0 group -my-0.5"
+          onMouseDown={handleBarDown}
+        >
+          <div className="w-8 h-0.5 rounded-full bg-lexi-border/30 group-hover:bg-lexi-accent/60 transition-colors" />
+        </div>
+
+        <div style={{ flexGrow: 1 - splitRatio, minHeight: 0 }}>
           <OutputArea
             result={result}
             error={error}
