@@ -1,0 +1,234 @@
+import { useState } from "react";
+import { X, Trash2, Star, Search, Clock, ChevronRight } from "lucide-react";
+import { useHistoryStore } from "../../stores/historyStore";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+
+interface HistoryPanelProps {
+  onClose: () => void;
+}
+
+export default function HistoryPanel({ onClose }: HistoryPanelProps) {
+  const records = useHistoryStore((s) => s.records);
+  const deleteRecord = useHistoryStore((s) => s.deleteRecord);
+  const toggleFavorite = useHistoryStore((s) => s.toggleFavorite);
+  const clearAll = useHistoryStore((s) => s.clearAll);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
+
+  const filteredRecords = records.filter((r) => {
+    if (showFavoritesOnly && !r.isFavorite) return false;
+    if (search) {
+      const q = search.toLowerCase();
+      return (
+        r.sourceText.toLowerCase().includes(q) ||
+        r.translatedText.toLowerCase().includes(q) ||
+        r.agentName.toLowerCase().includes(q)
+      );
+    }
+    return true;
+  });
+
+  const selectedRecord = selectedId
+    ? records.find((r) => r.id === selectedId)
+    : null;
+
+  const formatTime = (ts: number) => {
+    const d = new Date(ts);
+    const now = new Date();
+    const diff = now.getTime() - d.getTime();
+    if (diff < 60_000) return "刚刚";
+    if (diff < 3600_000) return `${Math.floor(diff / 60_000)} 分钟前`;
+    if (diff < 86400_000) return `${Math.floor(diff / 3600_000)} 小时前`;
+    return d.toLocaleDateString("zh-CN", {
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+      <div className="bg-lexi-card rounded-xl border border-lexi-border w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl animate-fade-in">
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-lexi-border">
+          <h2 className="text-lg font-semibold text-lexi-text">翻译历史</h2>
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-lg hover:bg-white/10 text-lexi-text-muted hover:text-lexi-text transition-colors"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* Toolbar */}
+        <div className="flex items-center gap-3 px-5 py-3 border-b border-lexi-border/50">
+          <div className="relative flex-1">
+            <Search
+              size={14}
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-lexi-text-muted"
+            />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="搜索翻译记录..."
+              className="w-full bg-lexi-input border border-lexi-border rounded-lg pl-9 pr-3 py-2 text-sm text-lexi-text placeholder-lexi-text-muted/40 focus:outline-none focus:ring-1 focus:ring-lexi-accent"
+            />
+          </div>
+          <button
+            onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
+            className={`p-2 rounded-lg transition-colors ${
+              showFavoritesOnly
+                ? "bg-yellow-500/20 text-yellow-400"
+                : "text-lexi-text-muted hover:bg-white/10"
+            }`}
+            title="只看收藏"
+          >
+            <Star size={16} />
+          </button>
+          {records.length > 0 && (
+            <button
+              onClick={() => {
+                if (confirm("确定清空所有翻译历史？此操作不可恢复。")) {
+                  clearAll();
+                }
+              }}
+              className="p-2 rounded-lg text-lexi-text-muted hover:bg-red-500/10 hover:text-red-400 transition-colors"
+              title="清空历史"
+            >
+              <Trash2 size={16} />
+            </button>
+          )}
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 overflow-hidden flex">
+          {/* List */}
+          <div className="w-72 border-r border-lexi-border overflow-y-auto">
+            {filteredRecords.length === 0 ? (
+              <div className="p-6 text-center text-sm text-lexi-text-muted">
+                {records.length === 0
+                  ? "暂无翻译记录"
+                  : "没有匹配的记录"}
+              </div>
+            ) : (
+              filteredRecords.map((record) => (
+                <div
+                  key={record.id}
+                  onClick={() =>
+                    setSelectedId(
+                      selectedId === record.id ? null : record.id
+                    )
+                  }
+                  className={`px-4 py-3 border-b border-lexi-border/30 cursor-pointer transition-colors ${
+                    selectedId === record.id
+                      ? "bg-lexi-accent/10"
+                      : "hover:bg-white/5"
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm text-lexi-text truncate">
+                        {record.sourceText}
+                      </div>
+                      <div className="flex items-center gap-2 mt-1 text-xs text-lexi-text-muted">
+                        <span>{record.agentName}</span>
+                        <span>·</span>
+                        <Clock size={10} />
+                        <span>{formatTime(record.timestamp)}</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      {record.isFavorite && (
+                        <Star size={12} className="text-yellow-400" fill="currentColor" />
+                      )}
+                      <ChevronRight
+                        size={14}
+                        className={`text-lexi-text-muted transition-transform ${
+                          selectedId === record.id ? "rotate-90" : ""
+                        }`}
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          {/* Detail */}
+          <div className="flex-1 overflow-y-auto p-5">
+            {selectedRecord ? (
+              <div className="space-y-4 animate-fade-in">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-sm text-lexi-text-muted">
+                    <span>{selectedRecord.agentName}</span>
+                    <span>·</span>
+                    <span>{selectedRecord.model}</span>
+                    <span>·</span>
+                    <span>{selectedRecord.latency}ms</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => toggleFavorite(selectedRecord.id)}
+                      className={`p-1.5 rounded-lg transition-colors ${
+                        selectedRecord.isFavorite
+                          ? "text-yellow-400"
+                          : "text-lexi-text-muted hover:text-yellow-400"
+                      }`}
+                    >
+                      <Star
+                        size={15}
+                        fill={selectedRecord.isFavorite ? "currentColor" : "none"}
+                      />
+                    </button>
+                    <button
+                      onClick={() => {
+                        deleteRecord(selectedRecord.id);
+                        setSelectedId(null);
+                      }}
+                      className="p-1.5 rounded-lg text-lexi-text-muted hover:text-red-400 transition-colors"
+                    >
+                      <Trash2 size={15} />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Source */}
+                <div>
+                  <div className="text-xs text-lexi-text-muted mb-1">
+                    原文 ({selectedRecord.sourceLang})
+                  </div>
+                  <div className="p-3 bg-lexi-input/50 rounded-lg text-sm text-lexi-text">
+                    {selectedRecord.sourceText}
+                  </div>
+                </div>
+
+                {/* Translation */}
+                <div>
+                  <div className="text-xs text-lexi-text-muted mb-1">
+                    译文 ({selectedRecord.targetLang})
+                  </div>
+                  <div className="p-4 bg-lexi-input/50 rounded-lg markdown-body text-sm">
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                      {selectedRecord.translatedText}
+                    </ReactMarkdown>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center justify-center h-full text-center text-lexi-text-muted">
+                <div>
+                  <div className="text-3xl mb-2">📋</div>
+                  <div className="text-sm">选择一条记录查看详情</div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

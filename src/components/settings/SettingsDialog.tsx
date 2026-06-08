@@ -1,0 +1,356 @@
+import { useState, useEffect } from "react";
+import { X, Download, Upload, Globe, Keyboard, Palette, Database } from "lucide-react";
+import ApiConfig from "./ApiConfig";
+import { useConfigStore } from "../../stores/configStore";
+import { useAgentStore } from "../../stores/agentStore";
+import { useHistoryStore } from "../../stores/historyStore";
+
+interface SettingsDialogProps {
+  onClose: () => void;
+}
+
+type SettingsTab = "api" | "webdav" | "shortcut" | "appearance";
+
+const TABS: { key: SettingsTab; label: string; icon: React.ReactNode }[] = [
+  { key: "api", label: "API 配置", icon: <Globe size={16} /> },
+  { key: "webdav", label: "WebDAV 同步", icon: <Database size={16} /> },
+  { key: "shortcut", label: "快捷键", icon: <Keyboard size={16} /> },
+  { key: "appearance", label: "外观", icon: <Palette size={16} /> },
+];
+
+export default function SettingsDialog({ onClose }: SettingsDialogProps) {
+  const [tab, setTab] = useState<SettingsTab>("api");
+  const settings = useConfigStore((s) => s.settings);
+  const updateSettings = useConfigStore((s) => s.updateSettings);
+  const updateWebDAV = useConfigStore((s) => s.updateWebDAV);
+
+  // WebDAV state
+  const [webdavUrl, setWebdavUrl] = useState(settings.webdav.url);
+  const [webdavUser, setWebdavUser] = useState(settings.webdav.username);
+  const [webdavPass, setWebdavPass] = useState(settings.webdav.password);
+  const [webdavPath, setWebdavPath] = useState(settings.webdav.remotePath);
+  const [syncStatus, setSyncStatus] = useState<string | null>(null);
+
+  // Close on Escape
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [onClose]);
+
+  const handleWebDAVSync = async (direction: "pull" | "push") => {
+    if (!webdavUrl || !webdavUser || !webdavPass) {
+      setSyncStatus("❌ 请填写完整的 WebDAV 配置");
+      return;
+    }
+
+    setSyncStatus("⏳ 同步中...");
+
+    try {
+      // Save WebDAV config first
+      updateWebDAV({
+        enabled: true,
+        url: webdavUrl,
+        username: webdavUser,
+        password: webdavPass,
+        remotePath: webdavPath,
+        lastSync: Date.now(),
+      });
+
+      if (direction === "pull") {
+        // Pull from WebDAV
+        const url = `${webdavUrl.replace(/\/+$/, "")}/${webdavPath.replace(/^\/+/, "")}`;
+        const auth = btoa(`${webdavUser}:${webdavPass}`);
+
+        const resp = await fetch(url, {
+          method: "GET",
+          headers: {
+            Authorization: `Basic ${auth}`,
+          },
+        });
+
+        if (!resp.ok) {
+          throw new Error(`HTTP ${resp.status}: ${resp.statusText}`);
+        }
+
+        const data = await resp.json();
+        if (data.providers) useConfigStore.setState({ providers: data.providers });
+        if (data.agents) useAgentStore.setState({ agents: data.agents, activeAgentId: data.activeAgentId });
+        if (data.settings) useConfigStore.setState({ settings: data.settings });
+        if (data.records) useHistoryStore.setState({ records: data.records });
+
+        setSyncStatus(`✅ 拉取成功 (${new Date().toLocaleTimeString()})`);
+      } else {
+        // Push to WebDAV
+        const data = {
+          providers: useConfigStore.getState().providers,
+          agents: useAgentStore.getState().agents,
+          activeAgentId: useAgentStore.getState().activeAgentId,
+          settings: useConfigStore.getState().settings,
+          records: useHistoryStore.getState().records,
+        };
+
+        const url = `${webdavUrl.replace(/\/+$/, "")}/${webdavPath.replace(/^\/+/, "")}`;
+        const auth = btoa(`${webdavUser}:${webdavPass}`);
+
+        const resp = await fetch(url, {
+          method: "PUT",
+          headers: {
+            Authorization: `Basic ${auth}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(data, null, 2),
+        });
+
+        if (!resp.ok) {
+          throw new Error(`HTTP ${resp.status}: ${resp.statusText}`);
+        }
+
+        setSyncStatus(`✅ 推送成功 (${new Date().toLocaleTimeString()})`);
+      }
+    } catch (e: any) {
+      setSyncStatus(`❌ 同步失败: ${e.message}`);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+      <div className="bg-lexi-card rounded-xl border border-lexi-border w-full max-w-3xl max-h-[90vh] flex flex-col shadow-2xl animate-fade-in">
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-lexi-border">
+          <h2 className="text-lg font-semibold text-lexi-text">设置</h2>
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-lg hover:bg-white/10 text-lexi-text-muted hover:text-lexi-text transition-colors"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* Tabs + Content */}
+        <div className="flex flex-1 overflow-hidden">
+          {/* Tab sidebar */}
+          <div className="w-44 border-r border-lexi-border p-3 space-y-1">
+            {TABS.map((t) => (
+              <button
+                key={t.key}
+                onClick={() => setTab(t.key)}
+                className={`flex items-center gap-2.5 w-full px-3 py-2.5 rounded-lg text-sm transition-all ${
+                  tab === t.key
+                    ? "bg-lexi-accent/15 text-lexi-accent-hover font-medium"
+                    : "text-lexi-text-muted hover:bg-white/10 hover:text-lexi-text"
+                }`}
+              >
+                {t.icon}
+                <span>{t.label}</span>
+              </button>
+            ))}
+          </div>
+
+          {/* Content */}
+          <div className="flex-1 overflow-y-auto p-5">
+            {tab === "api" && <ApiConfig />}
+
+            {tab === "webdav" && (
+              <div className="space-y-4">
+                <h3 className="text-base font-semibold text-lexi-text">
+                  WebDAV 配置同步
+                </h3>
+                <p className="text-sm text-lexi-text-muted">
+                  将配置和翻译历史同步到 WebDAV 服务器，在多设备间保持一致。
+                </p>
+
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-xs text-lexi-text-muted mb-1">
+                      WebDAV 地址
+                    </label>
+                    <input
+                      type="text"
+                      value={webdavUrl}
+                      onChange={(e) => setWebdavUrl(e.target.value)}
+                      placeholder="https://dav.example.com/remote.php/dav/files/user/"
+                      className="w-full bg-lexi-input border border-lexi-border rounded-lg px-3 py-2 text-sm text-lexi-text placeholder-lexi-text-muted/40 focus:outline-none focus:ring-1 focus:ring-lexi-accent"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs text-lexi-text-muted mb-1">
+                        用户名
+                      </label>
+                      <input
+                        type="text"
+                        value={webdavUser}
+                        onChange={(e) => setWebdavUser(e.target.value)}
+                        className="w-full bg-lexi-input border border-lexi-border rounded-lg px-3 py-2 text-sm text-lexi-text focus:outline-none focus:ring-1 focus:ring-lexi-accent"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-lexi-text-muted mb-1">
+                        密码
+                      </label>
+                      <input
+                        type="password"
+                        value={webdavPass}
+                        onChange={(e) => setWebdavPass(e.target.value)}
+                        className="w-full bg-lexi-input border border-lexi-border rounded-lg px-3 py-2 text-sm text-lexi-text focus:outline-none focus:ring-1 focus:ring-lexi-accent"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs text-lexi-text-muted mb-1">
+                      远程文件路径
+                    </label>
+                    <input
+                      type="text"
+                      value={webdavPath}
+                      onChange={(e) => setWebdavPath(e.target.value)}
+                      placeholder="/lexi/config.json"
+                      className="w-full bg-lexi-input border border-lexi-border rounded-lg px-3 py-2 text-sm text-lexi-text placeholder-lexi-text-muted/40 focus:outline-none focus:ring-1 focus:ring-lexi-accent"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 pt-2">
+                  <button
+                    onClick={() => handleWebDAVSync("pull")}
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg bg-lexi-accent/20 hover:bg-lexi-accent/30 text-lexi-accent-hover text-sm font-medium transition-all"
+                  >
+                    <Download size={15} />
+                    <span>从服务器拉取</span>
+                  </button>
+                  <button
+                    onClick={() => handleWebDAVSync("push")}
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg bg-green-500/10 hover:bg-green-500/20 text-green-400 text-sm font-medium transition-all"
+                  >
+                    <Upload size={15} />
+                    <span>推送到服务器</span>
+                  </button>
+                </div>
+
+                {syncStatus && (
+                  <div
+                    className={`p-3 rounded-lg text-sm animate-fade-in ${
+                      syncStatus.startsWith("✅")
+                        ? "bg-green-500/10 text-green-400"
+                        : syncStatus.startsWith("❌")
+                          ? "bg-red-500/10 text-red-400"
+                          : "bg-yellow-500/10 text-yellow-400"
+                    }`}
+                  >
+                    {syncStatus}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {tab === "shortcut" && (
+              <div className="space-y-4">
+                <h3 className="text-base font-semibold text-lexi-text">
+                  全局快捷键
+                </h3>
+                <p className="text-sm text-lexi-text-muted">
+                  使用全局快捷键在任何应用中快速呼出 Lexi 翻译窗口。
+                </p>
+
+                <div className="p-5 bg-lexi-input/50 rounded-xl border border-lexi-border text-center">
+                  <div className="inline-flex items-center gap-2 px-5 py-3 bg-lexi-card rounded-xl border border-lexi-border">
+                    <kbd className="px-3 py-1.5 bg-lexi-input border border-lexi-border rounded-lg text-sm font-mono text-lexi-text">
+                      Alt
+                    </kbd>
+                    <span className="text-lexi-text-muted">+</span>
+                    <kbd className="px-3 py-1.5 bg-lexi-input border border-lexi-border rounded-lg text-sm font-mono text-lexi-text">
+                      Space
+                    </kbd>
+                  </div>
+                  <p className="text-xs text-lexi-text-muted mt-3">
+                    按下 Alt+Space 切换翻译窗口的显示/隐藏
+                  </p>
+                </div>
+
+                <div className="p-4 bg-lexi-accent/10 rounded-xl border border-lexi-accent/20">
+                  <p className="text-sm text-lexi-text-muted">
+                    如需修改快捷键，请编辑配置文件中的
+                    <code className="text-lexi-accent-hover">global-shortcut</code> 部分。
+                    未来版本将支持可视化配置。
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {tab === "appearance" && (
+              <div className="space-y-4">
+                <h3 className="text-base font-semibold text-lexi-text">
+                  外观设置
+                </h3>
+
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-xs text-lexi-text-muted mb-1">
+                      主题
+                    </label>
+                    <select
+                      value={settings.theme}
+                      onChange={(e) =>
+                        updateSettings({
+                          theme: e.target.value as "dark" | "light",
+                        })
+                      }
+                      className="w-full bg-lexi-input border border-lexi-border rounded-lg px-3 py-2 text-sm text-lexi-text focus:outline-none focus:ring-1 focus:ring-lexi-accent"
+                    >
+                      <option value="dark">深色</option>
+                      <option value="light">浅色</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs text-lexi-text-muted mb-1">
+                      字号
+                    </label>
+                    <select
+                      value={settings.fontSize}
+                      onChange={(e) =>
+                        updateSettings({
+                          fontSize: e.target.value as "small" | "medium" | "large",
+                        })
+                      }
+                      className="w-full bg-lexi-input border border-lexi-border rounded-lg px-3 py-2 text-sm text-lexi-text focus:outline-none focus:ring-1 focus:ring-lexi-accent"
+                    >
+                      <option value="small">小</option>
+                      <option value="medium">中</option>
+                      <option value="large">大</option>
+                    </select>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-lexi-text">窗口置顶</span>
+                    <button
+                      onClick={() =>
+                        updateSettings({ alwaysOnTop: !settings.alwaysOnTop })
+                      }
+                      className={`relative w-10 h-5 rounded-full transition-colors ${
+                        settings.alwaysOnTop
+                          ? "bg-lexi-accent"
+                          : "bg-lexi-border"
+                      }`}
+                    >
+                      <span
+                        className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform ${
+                          settings.alwaysOnTop ? "left-5" : "left-0.5"
+                        }`}
+                      />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
