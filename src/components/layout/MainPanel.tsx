@@ -1,11 +1,21 @@
 import { useCallback, useState, useRef, useEffect } from "react";
 import InputArea from "../translation/InputArea";
 import OutputArea from "../translation/OutputArea";
+import AgentEditor from "../agents/AgentEditor";
+import SettingsDialog from "../settings/SettingsDialog";
+import HistoryPanel from "./HistoryPanel";
 import { useTranslate } from "../../hooks/useTranslate";
 import { useAgentStore } from "../../stores/agentStore";
 import { useConfigStore } from "../../stores/configStore";
+import type { TranslationAgent } from "../../types";
+
+type ViewType = "translation" | "agent-editor" | "history" | "settings";
 
 interface MainPanelProps {
+  view: ViewType;
+  editingAgent: TranslationAgent | null;
+  onCloseAgentEditor: () => void;
+  onBack: () => void;
   sourceLang: string;
   targetLang: string;
   onSourceLangChange: (lang: string) => void;
@@ -14,6 +24,10 @@ interface MainPanelProps {
 }
 
 export default function MainPanel({
+  view,
+  editingAgent,
+  onCloseAgentEditor,
+  onBack,
   sourceLang,
   targetLang,
   onSourceLangChange,
@@ -31,7 +45,6 @@ export default function MainPanel({
       const agent = getActiveAgent();
       const provider = getActiveProvider();
       if (!agent || !provider) return;
-
       translate(text, agent, provider, sourceLang, targetLang);
     },
     [getActiveAgent, getActiveProvider, translate, sourceLang, targetLang]
@@ -71,56 +84,75 @@ export default function MainPanel({
 
   return (
     <div className="flex flex-col h-full bg-lexi-bg">
-      {/* Agent info header */}
-      <div className="flex items-center gap-3 px-5 py-4 border-b border-lexi-border/50">
-        {activeAgent && (
-          <>
-            <span className="text-2xl">{activeAgent.icon}</span>
-            <div>
-              <h2 className="text-base font-semibold text-lexi-text">
-                {activeAgent.name}
-              </h2>
-              <p className="text-xs text-lexi-text-muted">
-                {activeAgent.description}
-              </p>
+      {/* Agent editor view */}
+      {view === "agent-editor" && (
+        <AgentEditor agent={editingAgent} onClose={onCloseAgentEditor} />
+      )}
+
+      {/* History view */}
+      {view === "history" && (
+        <HistoryPanel onClose={onBack} />
+      )}
+
+      {/* Settings view */}
+      {view === "settings" && (
+        <SettingsDialog onClose={onBack} />
+      )}
+
+      {/* Translation view (default) */}
+      {view === "translation" && (
+        <>
+          {/* Agent info header */}
+          <div className="flex items-center gap-3 px-5 py-4 border-b border-lexi-border/50">
+            {activeAgent && (
+              <>
+                <span className="text-2xl">{activeAgent.icon}</span>
+                <div>
+                  <h2 className="text-base font-semibold text-lexi-text">
+                    {activeAgent.name}
+                  </h2>
+                  <p className="text-xs text-lexi-text-muted">
+                    {activeAgent.description}
+                  </p>
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* Translation area - resizable Input/Output */}
+          <div ref={containerRef} className="flex-1 flex flex-col p-5 min-h-0">
+            <div style={{ flexGrow: splitRatio, minHeight: 0 }}>
+              <InputArea
+                onTranslate={handleTranslate}
+                onStop={stop}
+                translating={translating}
+                onClear={clear}
+                sourceLang={sourceLang}
+                targetLang={targetLang}
+                onSourceLangChange={onSourceLangChange}
+                onTargetLangChange={onTargetLangChange}
+                onSwapLang={onSwapLang}
+              />
             </div>
-          </>
-        )}
-      </div>
 
-      {/* Translation area - resizable Input/Output */}
-      <div ref={containerRef} className="flex-1 flex flex-col p-5 min-h-0">
-        <div style={{ flexGrow: splitRatio, minHeight: 0 }}>
-          <InputArea
-            onTranslate={handleTranslate}
-            onStop={stop}
-            translating={translating}
-            onClear={clear}
-            sourceLang={sourceLang}
-            targetLang={targetLang}
-            onSourceLangChange={onSourceLangChange}
-            onTargetLangChange={onTargetLangChange}
-            onSwapLang={onSwapLang}
-          />
-        </div>
+            <div
+              className="flex items-center justify-center h-2 cursor-row-resize flex-shrink-0 group -my-0.5"
+              onMouseDown={handleBarDown}
+            >
+              <div className="w-8 h-0.5 rounded-full bg-lexi-border/30 group-hover:bg-lexi-accent/60 transition-colors" />
+            </div>
 
-        {/* Drag-to-resize bar */}
-        <div
-          className="flex items-center justify-center h-2 cursor-row-resize flex-shrink-0 group -my-0.5"
-          onMouseDown={handleBarDown}
-        >
-          <div className="w-8 h-0.5 rounded-full bg-lexi-border/30 group-hover:bg-lexi-accent/60 transition-colors" />
-        </div>
-
-        <div style={{ flexGrow: 1 - splitRatio, minHeight: 0 }}>
-          <OutputArea
-            result={result}
-            error={error}
-            translating={translating}
-            latency={latency}
-          />
-        </div>
-      </div>
+            <div style={{ flexGrow: 1 - splitRatio, minHeight: 0 }}>
+              <OutputArea
+                result={result}
+                error={error}
+                translating={translating}
+                latency={latency}
+              />
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }

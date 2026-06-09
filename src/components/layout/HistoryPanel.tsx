@@ -50,21 +50,15 @@ export default function HistoryPanel({ onClose }: HistoryPanelProps) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-      <div className="bg-lexi-card rounded-xl border border-lexi-border w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl animate-fade-in">
+    <div className="flex-1 flex flex-col min-h-0">
+      <div className="bg-lexi-card flex flex-col min-h-0 overflow-hidden h-full">
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-lexi-border">
+        <div className="flex items-center px-5 py-4">
           <h2 className="text-lg font-semibold text-lexi-text">翻译历史</h2>
-          <button
-            onClick={onClose}
-            className="p-1.5 rounded-lg hover:bg-lexi-hover text-lexi-text-muted hover:text-lexi-text transition-colors"
-          >
-            <X size={18} />
-          </button>
         </div>
 
         {/* Toolbar */}
-        <div className="flex items-center gap-3 px-5 py-3 border-b border-lexi-border/50">
+        <div className="flex items-center gap-3 px-5 py-3">
           <div className="relative flex-1">
             <Search
               size={14}
