@@ -22,8 +22,9 @@ export default function MainPanel({
 }: MainPanelProps) {
   const { translate, stop, translating, result, error, latency, clear } =
     useTranslate();
-  const getActiveAgent = useAgentStore((s) => s.getActiveAgent);
+  const activeAgent = useAgentStore((s) => s.getActiveAgent());
   const getActiveProvider = useConfigStore((s) => s.getActiveProvider);
+  const getActiveAgent = useAgentStore((s) => s.getActiveAgent);
 
   const handleTranslate = useCallback(
     (text: string) => {
@@ -35,8 +36,6 @@ export default function MainPanel({
     },
     [getActiveAgent, getActiveProvider, translate, sourceLang, targetLang]
   );
-
-  const activeAgent = getActiveAgent();
 
   // Resizable split
   const [splitRatio, setSplitRatio] = useState(0.5);
