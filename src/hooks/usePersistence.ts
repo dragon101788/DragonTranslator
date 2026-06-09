@@ -2,9 +2,11 @@ import { useEffect, useRef } from "react";
 import { useAgentStore } from "../stores/agentStore";
 import { useConfigStore } from "../stores/configStore";
 import { useHistoryStore } from "../stores/historyStore";
+import type { Store } from "@tauri-apps/plugin-store";
 import type { TranslationAgent, LLMProvider, AppSettings } from "../types";
 
 const STORE_FILENAME = "lexi-data.json";
+const LS_KEY = "lexi-data";
 
 interface PersistedData {
   agents: TranslationAgent[];
@@ -15,72 +17,194 @@ interface PersistedData {
   records: any[];
 }
 
+// ---- environment detection ----
+
+function isTauriEnv(): boolean {
+  return (
+    typeof window !== "undefined" &&
+    "__TAURI_INTERNALS__" in window
+  );
+}
+
+// ---- gather / apply state snapshots ----
+
+function getSnapshot(): PersistedData {
+  return {
+    agents: useAgentStore.getState().agents,
+    activeAgentId: useAgentStore.getState().activeAgentId,
+    providers: useConfigStore.getState().providers,
+    activeProviderId: useConfigStore.getState().activeProviderId,
+    settings: useConfigStore.getState().settings,
+    records: useHistoryStore.getState().records,
+  };
+}
+
+function applySnapshot(data: PersistedData) {
+  if (data.agents)
+    useAgentStore.setState({
+      agents: data.agents,
+      activeAgentId: data.activeAgentId,
+    });
+  if (data.providers)
+    useConfigStore.setState({
+      providers: data.providers,
+      activeProviderId: data.activeProviderId,
+    });
+  if (data.settings)
+    useConfigStore.setState({ settings: data.settings });
+  if (data.records)
+    useHistoryStore.setState({ records: data.records });
+}
+
+// ---- Tauri backend (file-based) ----
+
+let _storePromise: Promise<Store> | null = null;
+
+function getStore(): Promise<Store> {
+  if (!_storePromise) {
+    _storePromise = import("@tauri-apps/plugin-store")
+      .then((m) => m.load(STORE_FILENAME, { autoSave: true, defaults: {} }))
+      .catch((e) => {
+        _storePromise = null;
+        throw e;
+      });
+  }
+  return _storePromise;
+}
+
+async function loadFromFile(): Promise<boolean> {
+  const store = await getStore();
+  const data = await store.get<PersistedData>("app");
+  if (data) {
+    applySnapshot(data);
+    console.log("[Persistence] ✅ Loaded from disk");
+    return true;
+  }
+  return false;
+}
+
+async function saveToFile(data: PersistedData) {
+  const store = await getStore();
+  await store.set("app", data);
+  await store.save();
+  console.log("[Persistence] ✅ Written to disk");
+}
+
+// ---- Browser backend (localStorage) ----
+
+function loadFromLocalStorage(): boolean {
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    if (raw) {
+      const data = JSON.parse(raw) as PersistedData;
+      applySnapshot(data);
+      console.log("[Persistence] ✅ Loaded from localStorage");
+      return true;
+    }
+  } catch (e) {
+    console.error("[Persistence] ❌ localStorage load failed:", e);
+  }
+  return false;
+}
+
+function saveToLocalStorage(data: PersistedData) {
+  try {
+    localStorage.setItem(LS_KEY, JSON.stringify(data));
+    console.log("[Persistence] ✅ Written to localStorage");
+  } catch (e) {
+    console.error("[Persistence] ❌ localStorage write failed:", e);
+  }
+}
+
+// ---- debounced persist ----
+
+let saveTimer: ReturnType<typeof setTimeout> | null = null;
+let lastWritten: string | null = null;
+
+function schedulePersist() {
+  if (saveTimer) clearTimeout(saveTimer);
+  saveTimer = setTimeout(persistNow, 50);
+}
+
+async function persistNow() {
+  saveTimer = null;
+  try {
+    const data = getSnapshot();
+    const serialized = JSON.stringify(data);
+    if (serialized === lastWritten) return;
+    lastWritten = serialized;
+
+    if (isTauriEnv()) {
+      await saveToFile(data);
+    } else {
+      saveToLocalStorage(data);
+    }
+  } catch (e) {
+    console.error("[Persistence] ❌ Write failed:", e);
+  }
+}
+
+async function loadPersisted() {
+  if (isTauriEnv()) {
+    try {
+      const loaded = await loadFromFile();
+      if (!loaded) console.log("[Persistence] 📄 No saved data, using defaults");
+      return;
+    } catch (e) {
+      console.error("[Persistence] ❌ Load from disk failed:", e);
+    }
+  } else {
+    const loaded = loadFromLocalStorage();
+    if (!loaded) console.log("[Persistence] 📄 No saved data, using defaults");
+  }
+}
+
 /**
- * Hook that handles loading and saving application state
- * using Tauri's Store plugin for local persistence.
- * Data is stored in the app's local directory for portability.
+ * Hybrid persistence: Tauri file store (desktop) → localStorage fallback (browser).
+ * Uses Zustand `subscribe` for reliable auto-save on every state change.
  */
 export function usePersistence() {
-  const agents = useAgentStore((s) => s.agents);
-  const activeAgentId = useAgentStore((s) => s.activeAgentId);
-  const providers = useConfigStore((s) => s.providers);
-  const activeProviderId = useConfigStore((s) => s.activeProviderId);
-  const settings = useConfigStore((s) => s.settings);
-  const records = useHistoryStore((s) => s.records);
+  const readyRef = useRef(false);
+  const unsubRef = useRef<Array<() => void>>([]);
 
-  const loadedRef = useRef(false);
-
-  // Load on mount — must complete before first save
   useEffect(() => {
     let cancelled = false;
-    loadData().then(() => {
-      if (!cancelled) loadedRef.current = true;
+
+    // 1. Load saved state
+    loadPersisted().then(() => {
+      if (cancelled) return;
+      readyRef.current = true;
+
+      // 2. Subscribe to store changes → auto-persist
+      const unsub1 = useAgentStore.subscribe(() => {
+        if (readyRef.current) schedulePersist();
+      });
+      const unsub2 = useConfigStore.subscribe(() => {
+        if (readyRef.current) schedulePersist();
+      });
+      const unsub3 = useHistoryStore.subscribe(() => {
+        if (readyRef.current) schedulePersist();
+      });
+      unsubRef.current = [unsub1, unsub2, unsub3];
     });
-    return () => { cancelled = true; };
+
+    // 3. Best-effort flush before unload
+    const onBeforeUnload = () => {
+      if (saveTimer) {
+        clearTimeout(saveTimer);
+        saveTimer = null;
+        persistNow();
+      }
+    };
+    window.addEventListener("beforeunload", onBeforeUnload);
+
+    return () => {
+      cancelled = true;
+      unsubRef.current.forEach((fn) => fn());
+      unsubRef.current = [];
+      window.removeEventListener("beforeunload", onBeforeUnload);
+    };
   }, []);
 
-  // Save on changes — skip until initial load completes to avoid
-  // overwriting stored data with default values
-  useEffect(() => {
-    if (!loadedRef.current) return;
-    saveData();
-  }, [agents, activeAgentId, providers, activeProviderId, settings, records]);
-
-  async function loadData() {
-    try {
-      const { load } = await import("@tauri-apps/plugin-store");
-      const store = await load(STORE_FILENAME, { autoSave: false, defaults: {} });
-      const data = await store.get<PersistedData>("app");
-      if (data) {
-        if (data.agents) useAgentStore.setState({ agents: data.agents, activeAgentId: data.activeAgentId });
-        if (data.providers) useConfigStore.setState({ providers: data.providers, activeProviderId: data.activeProviderId });
-        if (data.settings) useConfigStore.setState({ settings: data.settings });
-        if (data.records) useHistoryStore.setState({ records: data.records });
-      }
-    } catch (e) {
-      // Store not available (e.g., in browser dev mode) — use defaults
-      console.log("Store load skipped (dev mode):", e);
-    }
-  }
-
-  async function saveData() {
-    try {
-      const { load } = await import("@tauri-apps/plugin-store");
-      const store = await load(STORE_FILENAME, { autoSave: false, defaults: {} });
-      const data: PersistedData = {
-        agents: useAgentStore.getState().agents,
-        activeAgentId: useAgentStore.getState().activeAgentId,
-        providers: useConfigStore.getState().providers,
-        activeProviderId: useConfigStore.getState().activeProviderId,
-        settings: useConfigStore.getState().settings,
-        records: useHistoryStore.getState().records,
-      };
-      await store.set("app", data);
-      await store.save();
-    } catch (e) {
-      // Silent fail in dev mode
-    }
-  }
-
-  return { loadData, saveData };
+  return { loadData: loadPersisted, saveData: persistNow };
 }

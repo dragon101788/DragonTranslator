@@ -1,0 +1,4 @@
+# Static link MSVC runtime — produces a truly standalone .exe
+# that works on any Windows 10+ machine without VC++ redist.
+[target.x86_64-pc-windows-msvc]
+rustflags = ["-C", "target-feature=+crt-static"]

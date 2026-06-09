@@ -1,0 +1,18 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "cppvsdbg",
+      "request": "launch",
+      "name": "🐛 Debug Tauri (Rust)",
+      "program": "${workspaceFolder}/src-tauri/target/debug/app.exe",
+      "args": [],
+      "cwd": "${workspaceFolder}/src-tauri",
+      "stopAtEntry": false,
+      "environment": [],
+      "console": "integratedTerminal",
+      "preLaunchTask": "📦 Tauri: Build (Debug)",
+      "detail": "附加 MSVC 调试器到 Tauri Rust 后端"
+    }
+  ]
+}

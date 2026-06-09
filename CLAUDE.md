@@ -84,6 +84,12 @@ npx tauri dev
 Vite 端口：**5175**（vite.config.ts strictPort 指定）
 快捷键：**Alt+Space**（全局切换窗口显隐）
 
+## 开发服务自动重启
+
+- **每次修改 `src-tauri/` 下的 Rust 代码后**，必须重启 `npx tauri dev`（前端 HMR 只热更新 TS/JS，不更新 Rust）
+- 重启步骤：先杀旧进程（cargo、app.exe、占用 5175 端口的 node），再 `npx tauri dev`
+- 前端代码（`src/**`）改动无需重启，Vite HMR 自动生效
+
 ## 构建环境注意
 
 - **项目必须在纯 ASCII 路径下构建**（MSVC 链接器不支持中文路径）
