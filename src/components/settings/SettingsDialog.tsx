@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { X, Download, Upload, Globe, Keyboard, Palette, Database } from "lucide-react";
 import ApiConfig from "./ApiConfig";
+import ShortcutTab from "./ShortcutTab";
 import { useConfigStore } from "../../stores/configStore";
 import { useAgentStore } from "../../stores/agentStore";
 import { useHistoryStore } from "../../stores/historyStore";
@@ -249,37 +250,13 @@ export default function SettingsDialog({ onClose }: SettingsDialogProps) {
             )}
 
             {tab === "shortcut" && (
-              <div className="space-y-4">
-                <h3 className="text-base font-semibold text-lexi-text">
-                  全局快捷键
-                </h3>
-                <p className="text-sm text-lexi-text-muted">
-                  使用全局快捷键在任何应用中快速呼出 龙图腾翻译 窗口。
-                </p>
-
-                <div className="p-5 bg-lexi-input/50 rounded-xl border border-lexi-border text-center">
-                  <div className="inline-flex items-center gap-2 px-5 py-3 bg-lexi-card rounded-xl border border-lexi-border">
-                    <kbd className="px-3 py-1.5 bg-lexi-input border border-lexi-border rounded-lg text-sm font-mono text-lexi-text">
-                      Alt
-                    </kbd>
-                    <span className="text-lexi-text-muted">+</span>
-                    <kbd className="px-3 py-1.5 bg-lexi-input border border-lexi-border rounded-lg text-sm font-mono text-lexi-text">
-                      Space
-                    </kbd>
-                  </div>
-                  <p className="text-xs text-lexi-text-muted mt-3">
-                    按下 Alt+Space 切换翻译窗口的显示/隐藏
-                  </p>
-                </div>
-
-                <div className="p-4 bg-lexi-accent/10 rounded-xl border border-lexi-accent/20">
-                  <p className="text-sm text-lexi-text-muted">
-                    如需修改快捷键，请编辑配置文件中的
-                    <code className="text-lexi-accent-hover">global-shortcut</code> 部分。
-                    未来版本将支持可视化配置。
-                  </p>
-                </div>
-              </div>
+              <ShortcutTab
+                modifiers={settings.shortcutModifiers}
+                keyCode={settings.shortcutKey}
+                onSave={(modifiers, keyCode) => {
+                  updateSettings({ shortcutModifiers: modifiers, shortcutKey: keyCode });
+                }}
+              />
             )}
 
             {tab === "appearance" && (

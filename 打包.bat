@@ -6,9 +6,14 @@ echo   DragonTec Translator - Build
 echo ========================================
 echo.
 
-npx tauri build
+:: Capture the output path before building, then rebuild
+del /q "src-tauri\target\release\app.exe" 2>nul
 
-if %errorlevel% equ 0 (
+call npx tauri build
+
+
+
+if exist "src-tauri\target\release\app.exe" (
     echo.
     echo ========================================
     echo   Build SUCCESS
@@ -18,7 +23,7 @@ if %errorlevel% equ 0 (
 ) else (
     echo.
     echo ========================================
-    echo   Build FAILED (code: %errorlevel%)
+    echo   Build FAILED
     echo ========================================
 )
 

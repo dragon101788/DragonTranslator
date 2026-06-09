@@ -196,8 +196,8 @@ export const DEFAULT_PROVIDER: LLMProvider = {
 };
 
 export const DEFAULT_SETTINGS: AppSettings = {
-  shortcutModifiers: ["Alt"],
-  shortcutKey: "Space",
+  shortcutModifiers: ["Ctrl", "Alt"],
+  shortcutKey: "X",
   defaultSourceLang: "auto",
   defaultTargetLang: "en",
   alwaysOnTop: false,

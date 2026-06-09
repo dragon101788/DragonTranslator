@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import Sidebar from "./components/layout/Sidebar";
 import MainPanel from "./components/layout/MainPanel";
 import TitleBar from "./components/layout/TitleBar";
@@ -16,8 +16,19 @@ function isTauri() {
 }
 
 function App() {
-  // Persistence: auto-load and auto-save
+  // ---- Persistence + sync shortcut from settings to Rust on startup
   usePersistence();
+
+  useEffect(() => {
+    if (!isTauri()) return;
+    const s = useConfigStore.getState().settings;
+    import("@tauri-apps/api/core").then(({ invoke }) => {
+      invoke("configure_shortcut", {
+        modifiers: s.shortcutModifiers,
+        key: s.shortcutKey,
+      }).catch(console.error);
+    });
+  }, []);
 
   const [dialog, setDialog] = useState<DialogType>(null);
   const [editingAgent, setEditingAgent] = useState<TranslationAgent | null>(null);

@@ -1,7 +1,121 @@
+use std::sync::Mutex;
 use tauri::Manager;
 use tauri::menu::{MenuBuilder, MenuItemBuilder};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut};
+
+struct ShortcutState(Mutex<Option<Shortcut>>);
+
+fn parse_modifiers(mods: &[String]) -> Modifiers {
+    let mut result = Modifiers::empty();
+    for m in mods {
+        match m.to_lowercase().as_str() {
+            "ctrl" => result |= Modifiers::CONTROL,
+            "alt" => result |= Modifiers::ALT,
+            "shift" => result |= Modifiers::SHIFT,
+            "meta" | "win" | "super" => result |= Modifiers::SUPER,
+            _ => {}
+        }
+    }
+    result
+}
+
+fn parse_code(key: &str) -> Result<Code, String> {
+    match key.to_uppercase().as_str() {
+        "A" => Ok(Code::KeyA),
+        "B" => Ok(Code::KeyB),
+        "C" => Ok(Code::KeyC),
+        "D" => Ok(Code::KeyD),
+        "E" => Ok(Code::KeyE),
+        "F" => Ok(Code::KeyF),
+        "G" => Ok(Code::KeyG),
+        "H" => Ok(Code::KeyH),
+        "I" => Ok(Code::KeyI),
+        "J" => Ok(Code::KeyJ),
+        "K" => Ok(Code::KeyK),
+        "L" => Ok(Code::KeyL),
+        "M" => Ok(Code::KeyM),
+        "N" => Ok(Code::KeyN),
+        "O" => Ok(Code::KeyO),
+        "P" => Ok(Code::KeyP),
+        "Q" => Ok(Code::KeyQ),
+        "R" => Ok(Code::KeyR),
+        "S" => Ok(Code::KeyS),
+        "T" => Ok(Code::KeyT),
+        "U" => Ok(Code::KeyU),
+        "V" => Ok(Code::KeyV),
+        "W" => Ok(Code::KeyW),
+        "X" => Ok(Code::KeyX),
+        "Y" => Ok(Code::KeyY),
+        "Z" => Ok(Code::KeyZ),
+        "SPACE" => Ok(Code::Space),
+        "ENTER" => Ok(Code::NumpadEnter),
+        "ESCAPE" | "ESC" => Ok(Code::Escape),
+        "TAB" => Ok(Code::Tab),
+        "F1" => Ok(Code::F1),
+        "F2" => Ok(Code::F2),
+        "F3" => Ok(Code::F3),
+        "F4" => Ok(Code::F4),
+        "F5" => Ok(Code::F5),
+        "F6" => Ok(Code::F6),
+        "F7" => Ok(Code::F7),
+        "F8" => Ok(Code::F8),
+        "F9" => Ok(Code::F9),
+        "F10" => Ok(Code::F10),
+        "F11" => Ok(Code::F11),
+        "F12" => Ok(Code::F12),
+        "0" => Ok(Code::Digit0),
+        "1" => Ok(Code::Digit1),
+        "2" => Ok(Code::Digit2),
+        "3" => Ok(Code::Digit3),
+        "4" => Ok(Code::Digit4),
+        "5" => Ok(Code::Digit5),
+        "6" => Ok(Code::Digit6),
+        "7" => Ok(Code::Digit7),
+        "8" => Ok(Code::Digit8),
+        "9" => Ok(Code::Digit9),
+        _ => Err(format!("不支持的按键: {}", key)),
+    }
+}
+
+#[tauri::command]
+fn configure_shortcut(
+    app: tauri::AppHandle,
+    state: tauri::State<ShortcutState>,
+    modifiers: Vec<String>,
+    key: String,
+) -> Result<(), String> {
+    let shortcut = app.global_shortcut();
+    let mods = parse_modifiers(&modifiers);
+    let code = parse_code(&key)?;
+    let new_shortcut = Shortcut::new(Some(mods), code);
+
+    // If the same shortcut is already registered, skip
+    {
+        let guard = state.0.lock().map_err(|e| e.to_string())?;
+        if let Some(ref existing) = *guard {
+            if existing.eq(&new_shortcut) {
+                return Ok(());
+            }
+        }
+    }
+
+    // Unregister previous shortcut
+    if let Some(old) = state.0.lock().map_err(|e| e.to_string())?.take() {
+        let _ = shortcut.unregister(old);
+    }
+
+    // Unregister any leftover with the same key (shouldn't happen, but safe)
+    let _ = shortcut.unregister(new_shortcut.clone());
+
+    shortcut
+        .register(new_shortcut.clone())
+        .map_err(|e| format!("注册快捷键失败: {}", e))?;
+
+    *state.0.lock().map_err(|e| e.to_string())? = Some(new_shortcut);
+    println!("[Shortcut] 快捷键已更新: {:?}+{:?}", modifiers, key);
+    Ok(())
+}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -10,13 +124,23 @@ pub fn run() {
         .plugin(
             tauri_plugin_global_shortcut::Builder::default()
                 .with_handler(|app, shortcut, _event| {
-                    if shortcut.matches(Modifiers::ALT, Code::Space) {
-                        if let Some(window) = app.get_webview_window("main") {
-                            if window.is_visible().unwrap_or(false) {
-                                let _ = window.hide();
-                            } else {
-                                let _ = window.show();
-                                let _ = window.set_focus();
+                    // Clone the active shortcut for comparison to avoid
+                    // holding a MutexGuard across the closure.
+                    let active = app
+                        .state::<ShortcutState>()
+                        .0
+                        .lock()
+                        .unwrap()
+                        .clone();
+                    if let Some(ref active) = active {
+                        if shortcut.eq(active) {
+                            if let Some(window) = app.get_webview_window("main") {
+                                if window.is_visible().unwrap_or(false) {
+                                    let _ = window.hide();
+                                } else {
+                                    let _ = window.show();
+                                    let _ = window.set_focus();
+                                }
                             }
                         }
                     }
@@ -24,10 +148,9 @@ pub fn run() {
                 .build(),
         )
         .setup(|app| {
-            // Register global shortcut: Alt+Space to toggle window visibility
-            let shortcut = Shortcut::new(Some(Modifiers::ALT), Code::Space);
-            let _ = app.global_shortcut().unregister(shortcut.clone());
-            app.global_shortcut().register(shortcut)?;
+            // Manage shortcut state (actual registration happens on the
+            // frontend side via configure_shortcut during startup)
+            app.manage(ShortcutState(Mutex::new(None)));
 
             // ---- System tray ----
             let show_item = MenuItemBuilder::with_id("show", "显示窗口").build(app)?;
@@ -82,6 +205,7 @@ pub fn run() {
 
             Ok(())
         })
+        .invoke_handler(tauri::generate_handler![configure_shortcut])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
