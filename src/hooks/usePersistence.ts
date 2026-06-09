@@ -60,14 +60,20 @@ function applySnapshot(data: PersistedData) {
 
 let _storePromise: Promise<Store> | null = null;
 
-function getStore(): Promise<Store> {
+async function getStore(): Promise<Store> {
   if (!_storePromise) {
-    _storePromise = import("@tauri-apps/plugin-store")
-      .then((m) => m.load(STORE_FILENAME, { autoSave: true, defaults: {} }))
-      .catch((e) => {
-        _storePromise = null;
-        throw e;
-      });
+    _storePromise = (async () => {
+      // Resolve absolute path next to the exe (portable) or in app data dir
+      const { resourceDir } = await import("@tauri-apps/api/path");
+      const base = await resourceDir();
+      // In production resourceDir = exe folder; store lives next to exe
+      const storePath = `${base}${base.endsWith("\\") || base.endsWith("/") ? "" : "\\"}${STORE_FILENAME}`;
+      const { load } = await import("@tauri-apps/plugin-store");
+      return load(storePath, { autoSave: true, defaults: {} });
+    })().catch((e) => {
+      _storePromise = null;
+      throw e;
+    });
   }
   return _storePromise;
 }

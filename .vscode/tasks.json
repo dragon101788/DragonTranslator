@@ -20,14 +20,13 @@
     {
       "label": "📦 打包便携 EXE",
       "type": "shell",
-      "command": "npx",
-      "args": ["tauri", "build"],
+      "command": "npx tauri build && copy /y \"${workspaceFolder}\\src-tauri\\target\\release\\app.exe\" \"${workspaceFolder}\\\"",
       "options": {
         "cwd": "${workspaceFolder}"
       },
       "problemMatcher": ["$rustc"],
       "group": "build",
-      "detail": "编译为便携绿色单文件 → src-tauri/target/release/app.exe"
+      "detail": "编译便携 exe → 自动复制到项目根目录"
     },
     {
       "label": "📂 打开输出目录",
@@ -38,7 +37,7 @@
         "cwd": "${workspaceFolder}"
       },
       "problemMatcher": [],
-      "detail": "打开 app.exe 所在目录"
+      "detail": "打开 release 输出目录"
     }
   ]
 }

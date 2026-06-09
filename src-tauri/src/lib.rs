@@ -23,7 +23,9 @@ pub fn run() {
         )
         .setup(|app| {
             // Register global shortcut: Alt+Space to toggle window visibility
+            // Try to unregister any leftover from a previous unclean shutdown first
             let shortcut = Shortcut::new(Some(Modifiers::ALT), Code::Space);
+            let _ = app.global_shortcut().unregister(shortcut.clone());
             app.global_shortcut().register(shortcut)?;
 
             if cfg!(debug_assertions) {
