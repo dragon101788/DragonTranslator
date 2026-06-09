@@ -20,20 +20,28 @@
 
 1. **LLM 调用在前端**：直接用 `fetch` 调 OpenAI 兼容 API，不走 Tauri HTTP 插件（保持轻量）
 2. **流式输出**：SSE 逐 chunk 解析，AbortController 支持中断
-3. **全局快捷键 Alt+Space**：Rust 端 `global-shortcut` 插件注册，切换窗口显隐
-4. **绿色便携**：所有数据存 `lexi-data.json`（Tauri Store），不写注册表
+3. **全局快捷键 Alt+Space**：Rust 端 `global-shortcut` 插件注册，注册前先 `unregister` 容错
+4. **绿色便携**：配置文件 `dragon-translator-config.json` 紧跟 exe（通过 `resourceDir()` 获取 exe 路径 + 绝对路径传 store），用 `tauri-plugin-store` 持久化，不写注册表
 5. **自定义主题色**：Tailwind v4 `@theme` 块定义 `lexi-*` 色系（深色主题）
 6. **WebDAV 同步**：设置面板支持拉取/推送配置到 WebDAV 服务器
+7. **双重持久化**：Tauri 环境下用文件存储，浏览器 `localhost:5175` 调试时自动降级到 `localStorage`
+8. **静态链接 CRT**：`.cargo/config.toml` 配置 `crt-static`，生成的 exe 不依赖外部 VC++ 运行时
 
 ## 项目结构
 
 ```
 lexi-desktop/
 ├── dev.bat                    # 双击启动开发模式（自动配 MSVC 环境）
+├── 打包.bat                    # 双击一键打包便携 exe
+├── .vscode/
+│   ├── tasks.json             # VSCode 任务：启动开发(Ctrl+Shift+B) / 打包 / 打开输出
+│   └── launch.json            # VSCode 调试：MSVC 调试器附加 Rust 后端
 ├── src-tauri/                 # Rust 后端
+│   ├── .cargo/
+│   │   └── config.toml        # crt-static 静态链接，生成零依赖 exe
 │   ├── src/lib.rs             # 插件注册 + Alt+Space 全局快捷键
 │   ├── Cargo.toml             # 依赖：tauri, store, global-shortcut, log
-│   └── tauri.conf.json        # 窗口 860×620, devUrl:5175, plugins:{}
+│   └── tauri.conf.json        # 窗口 860×620, devUrl:5175, bundle 关闭
 ├── src/                       # React 前端
 │   ├── types/index.ts         # 所有 TS 类型 + 5 个预置智能体 + 默认配置
 │   ├── stores/
@@ -46,7 +54,7 @@ lexi-desktop/
 │   │   └── translation.ts     # translate, translateStream, createTranslationRecord
 │   ├── hooks/
 │   │   ├── useTranslate.ts    # 翻译 hook（流式输出 + AbortController 停止）
-│   │   └── usePersistence.ts  # Tauri Store 自动加载/保存
+│   │   └── usePersistence.ts  # 持久化（Tauri 文件 + localStorage 降级，Zustand subscribe 驱动）
 │   ├── components/
 │   │   ├── layout/Sidebar.tsx      # 侧边栏（智能体列表/折叠/底部菜单）
 │   │   ├── layout/MainPanel.tsx    # 主面板（语言选择 → InputArea + OutputArea 各半）
@@ -75,10 +83,15 @@ lexi-desktop/
 ## 运行方式
 
 ```bash
-# 方式1：双击 dev.bat（推荐，自动配 MSVC 环境）
-# 方式2：终端
+# 开发模式
 cd C:\Users\dragon\Desktop\lexi-desktop
 npx tauri dev
+# 或在 VSCode 中 Ctrl+Shift+B
+
+# 打包便携 exe
+双击 打包.bat
+# 或在 VSCode 中 Ctrl+Shift+P → "打包便携 EXE"
+# 输出：根目录\app.exe（配置文件自动创建在同目录）
 ```
 
 Vite 端口：**5175**（vite.config.ts strictPort 指定）
@@ -97,6 +110,13 @@ Vite 端口：**5175**（vite.config.ts strictPort 指定）
 - MSVC 版本：14.44.35207，Windows SDK：10.0.26100.0
 - `dev.bat` 已包含完整的 PATH 配置
 
+## 持久化机制
+
+- **Tauri 端**：通过 `resourceDir()` 获取 exe 所在目录，用绝对路径传给 `tauri-plugin-store`，配置文件紧跟 exe
+- **浏览器端**：`localStorage` 兜底（`localhost:5175` 调试时可用）
+- **驱动方式**：Zustand `subscribe` 直接订阅三 store（agent/config/history），50ms 去抖 + JSON 比对去重
+- **保存时机**：每次状态变更自动保存 + `beforeunload` 事件 flush 最后数据
+
 ## 当前状态
 
 - [x] 项目骨架 + Rust 后端（store + global-shortcut 插件）
@@ -107,8 +127,9 @@ Vite 端口：**5175**（vite.config.ts strictPort 指定）
 - [x] 智能体编辑器（图标/提示词/温度/Token）
 - [x] 翻译历史（搜索/收藏/详情）
 - [x] WebDAV 配置同步（拉取/推送）
-- [x] 全局快捷键 Alt+Space
-- [x] 持久化存储（Tauri Store）
+- [x] 全局快捷键 Alt+Space（unregister→register 容错）
+- [x] 持久化存储（文件 + localStorage 双轨，配置紧跟 exe）
+- [x] 便携打包（静态链接 CRT，bundle 关闭，单 exe 绿色发布）
+- [x] VSCode 集成（任务 + 调试配置）
 - [ ] 浅色主题（当前仅深色）
 - [ ] i18n 多语言界面
-- [ ] 打包发布配置

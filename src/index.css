@@ -162,3 +162,28 @@ body {
 .animate-pulse-glow {
   animation: pulse-glow 1.5s ease-in-out infinite;
 }
+
+/* ---- Custom title bar buttons ---- */
+
+.titlebar-btn {
+  width: 46px;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-lexi-text-muted);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+
+.titlebar-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--color-lexi-text);
+}
+
+.titlebar-btn-close:hover {
+  background: var(--color-lexi-error);
+  color: white;
+}

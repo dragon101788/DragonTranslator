@@ -1,6 +1,7 @@
 import { useState, useCallback } from "react";
 import Sidebar from "./components/layout/Sidebar";
 import MainPanel from "./components/layout/MainPanel";
+import TitleBar from "./components/layout/TitleBar";
 import AgentEditor from "./components/agents/AgentEditor";
 import SettingsDialog from "./components/settings/SettingsDialog";
 import HistoryPanel from "./components/layout/HistoryPanel";
@@ -45,23 +46,29 @@ function App() {
   }, []);
 
   return (
-    <div className="flex h-screen w-screen bg-lexi-bg overflow-hidden">
-      {/* Sidebar */}
-      <Sidebar
-        onOpenSettings={handleOpenSettings}
-        onOpenHistory={handleOpenHistory}
-        onEditAgent={handleEditAgent}
-      />
+    <div className="flex flex-col h-screen w-screen bg-lexi-bg overflow-hidden">
+      {/* Custom title bar (Tauri only) */}
+      <TitleBar />
 
-      {/* Main Panel */}
-      <div className="flex-1 min-w-0">
-        <MainPanel
-          sourceLang={sourceLang}
-          targetLang={targetLang}
-          onSourceLangChange={setSourceLang}
-          onTargetLangChange={setTargetLang}
-          onSwapLang={handleSwapLang}
+      {/* Body */}
+      <div className="flex flex-1 min-h-0">
+        {/* Sidebar */}
+        <Sidebar
+          onOpenSettings={handleOpenSettings}
+          onOpenHistory={handleOpenHistory}
+          onEditAgent={handleEditAgent}
         />
+
+        {/* Main Panel */}
+        <div className="flex-1 min-w-0">
+          <MainPanel
+            sourceLang={sourceLang}
+            targetLang={targetLang}
+            onSourceLangChange={setSourceLang}
+            onTargetLangChange={setTargetLang}
+            onSwapLang={handleSwapLang}
+          />
+        </div>
       </div>
 
       {/* Dialogs */}

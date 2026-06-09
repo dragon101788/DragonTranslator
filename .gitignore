@@ -31,4 +31,4 @@ src-tauri/target/
 *.exe
 
 # Local portable data (contains API keys)
-lexi-data.json
+dragon-translator-config.json

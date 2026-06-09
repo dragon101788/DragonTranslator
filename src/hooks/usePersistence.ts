@@ -5,8 +5,8 @@ import { useHistoryStore } from "../stores/historyStore";
 import type { Store } from "@tauri-apps/plugin-store";
 import type { TranslationAgent, LLMProvider, AppSettings } from "../types";
 
-const STORE_FILENAME = "lexi-data.json";
-const LS_KEY = "lexi-data";
+const STORE_FILENAME = "dragon-translator-config.json";
+const LS_KEY = "dragon-translator-config";
 
 interface PersistedData {
   agents: TranslationAgent[];
