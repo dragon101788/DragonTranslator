@@ -58,6 +58,8 @@ export interface AppSettings {
   // Theme
   theme: "dark" | "light";
   fontSize: "small" | "medium" | "large";
+  // Tray
+  closeToTray: boolean;
 }
 
 export interface WebDAVConfig {
@@ -210,4 +212,5 @@ export const DEFAULT_SETTINGS: AppSettings = {
   },
   theme: "dark",
   fontSize: "medium",
+  closeToTray: true,
 };

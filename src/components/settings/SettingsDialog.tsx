@@ -327,6 +327,31 @@ export default function SettingsDialog({ onClose }: SettingsDialogProps) {
                   </div>
 
                   <div className="flex items-center justify-between">
+                    <div>
+                      <span className="text-sm text-lexi-text">关闭时最小化到托盘</span>
+                      <p className="text-xs text-lexi-text-muted mt-0.5">
+                        点击关闭按钮时隐藏窗口而非退出程序
+                      </p>
+                    </div>
+                    <button
+                      onClick={() =>
+                        updateSettings({ closeToTray: !settings.closeToTray })
+                      }
+                      className={`relative w-10 h-5 rounded-full transition-colors ${
+                        settings.closeToTray
+                          ? "bg-lexi-accent"
+                          : "bg-lexi-border"
+                      }`}
+                    >
+                      <span
+                        className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform ${
+                          settings.closeToTray ? "left-5" : "left-0.5"
+                        }`}
+                      />
+                    </button>
+                  </div>
+
+                  <div className="flex items-center justify-between">
                     <span className="text-sm text-lexi-text">窗口置顶</span>
                     <button
                       onClick={() =>

@@ -5,7 +5,11 @@ function isTauri() {
   return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 }
 
-export default function TitleBar() {
+interface TitleBarProps {
+  onCloseRequest?: () => void;
+}
+
+export default function TitleBar({ onCloseRequest }: TitleBarProps) {
   const [maximized, setMaximized] = useState(false);
   const [appWindow, setAppWindow] = useState<ReturnType<typeof getCurrentWindow> | null>(null);
 
@@ -44,8 +48,12 @@ export default function TitleBar() {
   }, [appWindow]);
 
   const handleClose = useCallback(() => {
-    appWindow?.close().catch(console.error);
-  }, [appWindow]);
+    if (onCloseRequest) {
+      onCloseRequest();
+    } else {
+      appWindow?.close().catch(console.error);
+    }
+  }, [appWindow, onCloseRequest]);
 
   if (!isTauri()) return null;
 
