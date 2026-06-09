@@ -81,7 +81,7 @@ export default function ApiConfig() {
         <h3 className="text-base font-semibold text-lexi-text">API 服务商</h3>
         <button
           onClick={handleAdd}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm text-lexi-text-muted hover:bg-white/10 hover:text-lexi-text transition-colors"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm text-lexi-text-muted hover:bg-lexi-hover hover:text-lexi-text transition-colors"
         >
           <Plus size={14} />
           <span>添加</span>
@@ -100,7 +100,7 @@ export default function ApiConfig() {
             className={`px-3 py-1.5 rounded-lg text-sm transition-all ${
               provider.id === activeProviderId
                 ? "bg-lexi-accent/20 text-lexi-accent-hover ring-1 ring-lexi-accent/30"
-                : "text-lexi-text-muted hover:bg-white/10 hover:text-lexi-text"
+                : "text-lexi-text-muted hover:bg-lexi-hover hover:text-lexi-text"
             }`}
           >
             {provider.name}
@@ -162,7 +162,7 @@ export default function ApiConfig() {
               />
               <button
                 onClick={() => setShowKey(!showKey)}
-                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-white/10 text-lexi-text-muted"
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-lexi-hover text-lexi-text-muted"
               >
                 {showKey ? <EyeOff size={14} /> : <Eye size={14} />}
               </button>

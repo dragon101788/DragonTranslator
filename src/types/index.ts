@@ -56,8 +56,8 @@ export interface AppSettings {
   // WebDAV sync
   webdav: WebDAVConfig;
   // Theme
-  theme: "dark" | "light";
-  fontSize: "small" | "medium" | "large";
+  theme: "dark" | "light" | "geek";
+  fontSize: number; // px
   // Tray
   closeToTray: boolean;
 }
@@ -211,6 +211,6 @@ export const DEFAULT_SETTINGS: AppSettings = {
     lastSync: null,
   },
   theme: "dark",
-  fontSize: "medium",
+  fontSize: 14,
   closeToTray: true,
 };

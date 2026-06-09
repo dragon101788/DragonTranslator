@@ -13,6 +13,35 @@
   --color-lexi-warning: #f59e0b;
   --color-lexi-error: #ef4444;
   --color-lexi-input: #0f172a;
+  --color-lexi-hover: rgba(255, 255, 255, 0.08);
+}
+
+/* ---- 月光白 (Clean 风格) ---- */
+[data-theme="light"] {
+  --color-lexi-bg: #ffffff;
+  --color-lexi-sidebar: #f8f9fa;
+  --color-lexi-card: #ffffff;
+  --color-lexi-border: #e9ecef;
+  --color-lexi-text: #1a1a2e;
+  --color-lexi-text-muted: #868e96;
+  --color-lexi-accent: #5b7cfa;
+  --color-lexi-accent-hover: #4a6cf7;
+  --color-lexi-input: #f8f9fa;
+  --color-lexi-hover: rgba(0, 0, 0, 0.04);
+}
+
+/* ---- 暗夜紫 (One Dark Pro 风格) ---- */
+[data-theme="geek"] {
+  --color-lexi-bg: #13131a;
+  --color-lexi-sidebar: #1a1a24;
+  --color-lexi-card: #1e1e2a;
+  --color-lexi-border: #2d2d3f;
+  --color-lexi-text: #cdd6f4;
+  --color-lexi-text-muted: #7a7f9a;
+  --color-lexi-accent: #8b5cf6;
+  --color-lexi-accent-hover: #a78bfa;
+  --color-lexi-input: #1a1a24;
+  --color-lexi-hover: rgba(255, 255, 255, 0.06);
 }
 
 * {
@@ -27,6 +56,10 @@ body,
   height: 100%;
   width: 100%;
   overflow: hidden;
+}
+
+html {
+  font-size: var(--lexi-font-size, 14px);
 }
 
 body {
@@ -179,7 +212,7 @@ body {
 }
 
 .titlebar-btn:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--color-lexi-hover);
   color: var(--color-lexi-text);
 }
 

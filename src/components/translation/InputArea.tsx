@@ -92,7 +92,7 @@ export default function InputArea({
 
           <button
             onClick={onSwapLang}
-            className="p-1 rounded hover:bg-white/10 text-lexi-text-muted hover:text-lexi-text transition-colors"
+            className="p-1 rounded hover:bg-lexi-hover text-lexi-text-muted hover:text-lexi-text transition-colors"
             title="交换语言方向"
           >
             <ArrowLeftRight size={14} />
@@ -117,7 +117,7 @@ export default function InputArea({
           {text && (
             <button
               onClick={handleClear}
-              className="p-1 rounded hover:bg-white/10 text-lexi-text-muted hover:text-lexi-text transition-colors"
+              className="p-1 rounded hover:bg-lexi-hover text-lexi-text-muted hover:text-lexi-text transition-colors"
               title="清空"
             >
               <X size={14} />

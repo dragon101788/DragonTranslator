@@ -34,7 +34,7 @@ export default function Sidebar({
       <div className="flex flex-col items-center w-14 bg-lexi-sidebar border-r border-lexi-border py-3 gap-2">
         <button
           onClick={() => setCollapsed(false)}
-          className="p-2 rounded-lg hover:bg-white/10 text-lexi-text-muted hover:text-lexi-text transition-colors"
+          className="p-2 rounded-lg hover:bg-lexi-hover text-lexi-text-muted hover:text-lexi-text transition-colors"
           title="展开侧边栏"
         >
           <ChevronLeft size={18} />
@@ -46,7 +46,7 @@ export default function Sidebar({
             className={`p-2 rounded-lg transition-colors text-lg ${
               agent.id === activeAgentId
                 ? "bg-lexi-accent/20 text-lexi-accent-hover"
-                : "text-lexi-text-muted hover:bg-white/10 hover:text-lexi-text"
+                : "text-lexi-text-muted hover:bg-lexi-hover hover:text-lexi-text"
             }`}
             title={agent.name}
           >
@@ -66,7 +66,7 @@ export default function Sidebar({
         </h1>
         <button
           onClick={() => setCollapsed(true)}
-          className="p-1.5 rounded-md hover:bg-white/10 text-lexi-text-muted hover:text-lexi-text transition-colors"
+          className="p-1.5 rounded-md hover:bg-lexi-hover text-lexi-text-muted hover:text-lexi-text transition-colors"
           title="收起侧边栏"
         >
           <ChevronLeft size={16} />
@@ -81,7 +81,7 @@ export default function Sidebar({
           </span>
           <button
             onClick={() => onEditAgent(null)}
-            className="p-1 rounded-md hover:bg-white/10 text-lexi-text-muted hover:text-lexi-accent-hover transition-colors"
+            className="p-1 rounded-md hover:bg-lexi-hover text-lexi-text-muted hover:text-lexi-accent-hover transition-colors"
             title="新增智能体"
           >
             <Plus size={16} />
@@ -94,7 +94,7 @@ export default function Sidebar({
             className={`group relative mb-1 rounded-lg transition-all cursor-pointer ${
               agent.id === activeAgentId
                 ? "bg-lexi-accent/15 ring-1 ring-lexi-accent/30"
-                : "hover:bg-white/5"
+                : "hover:bg-lexi-hover"
             }`}
             onClick={() => setActiveAgent(agent.id)}
             onMouseEnter={() => setHoveredId(agent.id)}
@@ -120,7 +120,7 @@ export default function Sidebar({
                     e.stopPropagation();
                     onEditAgent(agent);
                   }}
-                  className="p-1 rounded hover:bg-white/10 text-lexi-text-muted hover:text-lexi-text transition-colors"
+                  className="p-1 rounded hover:bg-lexi-hover text-lexi-text-muted hover:text-lexi-text transition-colors"
                   title="编辑"
                 >
                   <Settings size={14} />
@@ -130,7 +130,7 @@ export default function Sidebar({
                     e.stopPropagation();
                     duplicateAgent(agent.id);
                   }}
-                  className="p-1 rounded hover:bg-white/10 text-lexi-text-muted hover:text-lexi-text transition-colors"
+                  className="p-1 rounded hover:bg-lexi-hover text-lexi-text-muted hover:text-lexi-text transition-colors"
                   title="复制"
                 >
                   <Copy size={14} />
@@ -157,21 +157,21 @@ export default function Sidebar({
       <div className="border-t border-lexi-border p-2 space-y-1">
         <button
           onClick={() => onEditAgent(null)}
-          className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm text-lexi-text-muted hover:bg-white/10 hover:text-lexi-text transition-colors"
+          className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm text-lexi-text-muted hover:bg-lexi-hover hover:text-lexi-text transition-colors"
         >
           <Plus size={16} />
           <span>新增智能体</span>
         </button>
         <button
           onClick={onOpenHistory}
-          className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm text-lexi-text-muted hover:bg-white/10 hover:text-lexi-text transition-colors"
+          className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm text-lexi-text-muted hover:bg-lexi-hover hover:text-lexi-text transition-colors"
         >
           <History size={16} />
           <span>翻译历史</span>
         </button>
         <button
           onClick={onOpenSettings}
-          className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm text-lexi-text-muted hover:bg-white/10 hover:text-lexi-text transition-colors"
+          className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm text-lexi-text-muted hover:bg-lexi-hover hover:text-lexi-text transition-colors"
         >
           <Settings size={16} />
           <span>设置</span>

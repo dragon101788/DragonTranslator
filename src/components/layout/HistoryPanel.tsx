@@ -57,7 +57,7 @@ export default function HistoryPanel({ onClose }: HistoryPanelProps) {
           <h2 className="text-lg font-semibold text-lexi-text">翻译历史</h2>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg hover:bg-white/10 text-lexi-text-muted hover:text-lexi-text transition-colors"
+            className="p-1.5 rounded-lg hover:bg-lexi-hover text-lexi-text-muted hover:text-lexi-text transition-colors"
           >
             <X size={18} />
           </button>
@@ -83,7 +83,7 @@ export default function HistoryPanel({ onClose }: HistoryPanelProps) {
             className={`p-2 rounded-lg transition-colors ${
               showFavoritesOnly
                 ? "bg-yellow-500/20 text-yellow-400"
-                : "text-lexi-text-muted hover:bg-white/10"
+                : "text-lexi-text-muted hover:bg-lexi-hover"
             }`}
             title="只看收藏"
           >
@@ -126,7 +126,7 @@ export default function HistoryPanel({ onClose }: HistoryPanelProps) {
                   className={`px-4 py-3 border-b border-lexi-border/30 cursor-pointer transition-colors ${
                     selectedId === record.id
                       ? "bg-lexi-accent/10"
-                      : "hover:bg-white/5"
+                      : "hover:bg-lexi-hover"
                   }`}
                 >
                   <div className="flex items-start justify-between gap-2">

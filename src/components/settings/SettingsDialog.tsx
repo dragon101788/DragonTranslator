@@ -124,7 +124,7 @@ export default function SettingsDialog({ onClose }: SettingsDialogProps) {
           <h2 className="text-lg font-semibold text-lexi-text">设置</h2>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg hover:bg-white/10 text-lexi-text-muted hover:text-lexi-text transition-colors"
+            className="p-1.5 rounded-lg hover:bg-lexi-hover text-lexi-text-muted hover:text-lexi-text transition-colors"
           >
             <X size={18} />
           </button>
@@ -141,7 +141,7 @@ export default function SettingsDialog({ onClose }: SettingsDialogProps) {
                 className={`flex items-center gap-2.5 w-full px-3 py-2.5 rounded-lg text-sm transition-all ${
                   tab === t.key
                     ? "bg-lexi-accent/15 text-lexi-accent-hover font-medium"
-                    : "text-lexi-text-muted hover:bg-white/10 hover:text-lexi-text"
+                    : "text-lexi-text-muted hover:bg-lexi-hover hover:text-lexi-text"
                 }`}
               >
                 {t.icon}
@@ -280,7 +280,8 @@ export default function SettingsDialog({ onClose }: SettingsDialogProps) {
                       className="w-full bg-lexi-input border border-lexi-border rounded-lg px-3 py-2 text-sm text-lexi-text focus:outline-none focus:ring-1 focus:ring-lexi-accent"
                     >
                       <option value="dark">深色</option>
-                      <option value="light">浅色</option>
+                      <option value="light">月光白</option>
+                      <option value="geek">暗夜紫</option>
                     </select>
                   </div>
 
@@ -288,19 +289,22 @@ export default function SettingsDialog({ onClose }: SettingsDialogProps) {
                     <label className="block text-xs text-lexi-text-muted mb-1">
                       字号
                     </label>
-                    <select
-                      value={settings.fontSize}
-                      onChange={(e) =>
-                        updateSettings({
-                          fontSize: e.target.value as "small" | "medium" | "large",
-                        })
-                      }
-                      className="w-full bg-lexi-input border border-lexi-border rounded-lg px-3 py-2 text-sm text-lexi-text focus:outline-none focus:ring-1 focus:ring-lexi-accent"
-                    >
-                      <option value="small">小</option>
-                      <option value="medium">中</option>
-                      <option value="large">大</option>
-                    </select>
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="range"
+                        min="12"
+                        max="20"
+                        step="1"
+                        value={settings.fontSize}
+                        onChange={(e) =>
+                          updateSettings({ fontSize: Number(e.target.value) })
+                        }
+                        className="flex-1 accent-lexi-accent cursor-pointer"
+                      />
+                      <span className="text-sm text-lexi-text font-mono min-w-[3ch] text-right">
+                        {settings.fontSize}px
+                      </span>
+                    </div>
                   </div>
 
                   <div className="flex items-center justify-between">

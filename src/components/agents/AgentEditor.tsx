@@ -69,7 +69,7 @@ export default function AgentEditor({ agent, onClose }: AgentEditorProps) {
           </h2>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg hover:bg-white/10 text-lexi-text-muted hover:text-lexi-text transition-colors"
+            className="p-1.5 rounded-lg hover:bg-lexi-hover text-lexi-text-muted hover:text-lexi-text transition-colors"
           >
             <X size={18} />
           </button>
@@ -91,7 +91,7 @@ export default function AgentEditor({ agent, onClose }: AgentEditorProps) {
                     className={`w-9 h-9 flex items-center justify-center rounded-lg text-lg transition-all ${
                       icon === emoji
                         ? "bg-lexi-accent/20 ring-1 ring-lexi-accent/40"
-                        : "hover:bg-white/10"
+                        : "hover:bg-lexi-hover"
                     }`}
                   >
                     {emoji}
@@ -202,7 +202,7 @@ export default function AgentEditor({ agent, onClose }: AgentEditorProps) {
         <div className="flex items-center justify-end gap-3 px-5 py-4 border-t border-lexi-border">
           <button
             onClick={onClose}
-            className="px-4 py-2 rounded-lg text-sm text-lexi-text-muted hover:bg-white/10 transition-colors"
+            className="px-4 py-2 rounded-lg text-sm text-lexi-text-muted hover:bg-lexi-hover transition-colors"
           >
             取消
           </button>

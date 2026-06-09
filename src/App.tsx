@@ -16,6 +16,18 @@ function isTauri() {
 }
 
 function App() {
+  // ---- Sync theme & font-size to <html> ----
+  useEffect(() => {
+    const unsub = useConfigStore.subscribe((s) => {
+      document.documentElement.setAttribute("data-theme", s.settings.theme);
+      document.documentElement.style.setProperty("--lexi-font-size", `${s.settings.fontSize}px`);
+    });
+    const s = useConfigStore.getState().settings;
+    document.documentElement.setAttribute("data-theme", s.theme);
+    document.documentElement.style.setProperty("--lexi-font-size", `${s.fontSize}px`);
+    return unsub;
+  }, []);
+
   // ---- Persistence + sync shortcut from settings to Rust on startup
   usePersistence();
 
@@ -155,7 +167,7 @@ function App() {
               </button>
               <button
                 onClick={handleQuit}
-                className="w-full px-4 py-3 rounded-lg bg-white/5 hover:bg-white/10 text-lexi-text text-sm font-medium transition-all text-left"
+                className="w-full px-4 py-3 rounded-lg bg-lexi-hover hover:bg-lexi-hover text-lexi-text text-sm font-medium transition-all text-left"
               >
                 ❌ 退出程序
                 <span className="block text-xs text-lexi-text-muted mt-0.5 font-normal">
