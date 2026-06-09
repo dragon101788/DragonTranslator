@@ -2,9 +2,10 @@ use std::sync::Mutex;
 use tauri::Manager;
 use tauri::menu::{MenuBuilder, MenuItemBuilder};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
-use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut};
+use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutEvent};
 
-struct ShortcutState(Mutex<Option<Shortcut>>);
+// Keep our internal state struct name distinct from the plugin's type
+struct RegisteredShortcut(Mutex<Option<Shortcut>>);
 
 fn parse_modifiers(mods: &[String]) -> Modifiers {
     let mut result = Modifiers::empty();
@@ -81,7 +82,7 @@ fn parse_code(key: &str) -> Result<Code, String> {
 #[tauri::command]
 fn configure_shortcut(
     app: tauri::AppHandle,
-    state: tauri::State<ShortcutState>,
+    state: tauri::State<RegisteredShortcut>,
     modifiers: Vec<String>,
     key: String,
 ) -> Result<(), String> {
@@ -123,11 +124,16 @@ pub fn run() {
         .plugin(tauri_plugin_store::Builder::default().build())
         .plugin(
             tauri_plugin_global_shortcut::Builder::default()
-                .with_handler(|app, shortcut, _event| {
-                    // Clone the active shortcut for comparison to avoid
-                    // holding a MutexGuard across the closure.
+                .with_handler(|app, shortcut, event: ShortcutEvent| {
+                    // Only respond to Pressed — the handler fires on
+                    // both Pressed and Released, and we don't want to
+                    // toggle the window twice.
+                    use tauri_plugin_global_shortcut::ShortcutState as GShortcutState;
+                    if event.state != GShortcutState::Pressed {
+                        return;
+                    }
                     let active = app
-                        .state::<ShortcutState>()
+                        .state::<RegisteredShortcut>()
                         .0
                         .lock()
                         .unwrap()
@@ -150,7 +156,7 @@ pub fn run() {
         .setup(|app| {
             // Manage shortcut state (actual registration happens on the
             // frontend side via configure_shortcut during startup)
-            app.manage(ShortcutState(Mutex::new(None)));
+            app.manage(RegisteredShortcut(Mutex::new(None)));
 
             // ---- System tray ----
             let show_item = MenuItemBuilder::with_id("show", "显示窗口").build(app)?;
