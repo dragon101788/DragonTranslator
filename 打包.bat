@@ -29,3 +29,4 @@ if exist "src-tauri\target\release\app.exe" (
 
 echo.
 pause
+ 

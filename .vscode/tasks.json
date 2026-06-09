@@ -4,8 +4,7 @@
     {
       "label": "🛠 启动开发",
       "type": "shell",
-      "command": "npx",
-      "args": ["tauri", "dev"],
+      "command": "${workspaceFolder}\\运行.bat",
       "options": {
         "cwd": "${workspaceFolder}"
       },
@@ -15,7 +14,7 @@
         "isDefault": true
       },
       "isBackground": true,
-      "detail": "启动 Tauri 开发模式（Vite HMR + Rust），默认 Ctrl+Shift+B"
+      "detail": "双击 dev.bat 启动开发模式，默认 Ctrl+Shift+B"
     },
     {
       "label": "📦 打包便携 EXE",
