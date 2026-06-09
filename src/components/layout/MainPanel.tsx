@@ -1,4 +1,4 @@
-import { useCallback, useState, useRef, useEffect } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 import InputArea from "../translation/InputArea";
 import OutputArea from "../translation/OutputArea";
 import AgentEditor from "../agents/AgentEditor";
@@ -84,25 +84,20 @@ export default function MainPanel({
 
   return (
     <div className="flex flex-col h-full bg-lexi-bg">
-      {/* Agent editor view */}
       {view === "agent-editor" && (
         <AgentEditor agent={editingAgent} onClose={onCloseAgentEditor} />
       )}
 
-      {/* History view */}
       {view === "history" && (
         <HistoryPanel onClose={onBack} />
       )}
 
-      {/* Settings view */}
       {view === "settings" && (
         <SettingsDialog onClose={onBack} />
       )}
 
-      {/* Translation view (default) */}
       {view === "translation" && (
         <>
-          {/* Agent info header */}
           <div className="flex items-center gap-3 px-5 py-4 border-b border-lexi-border/50">
             {activeAgent && (
               <>
@@ -119,7 +114,6 @@ export default function MainPanel({
             )}
           </div>
 
-          {/* Translation area - resizable Input/Output */}
           <div ref={containerRef} className="flex-1 flex flex-col p-5 min-h-0">
             <div style={{ flexGrow: splitRatio, minHeight: 0 }}>
               <InputArea

@@ -53,6 +53,22 @@ function App() {
     setTargetLang(sourceLang);
   }, [sourceLang, targetLang]);
 
+  // ---- Window close logic ----
+
+  const handleCloseRequest = useCallback(() => {
+    if (!isTauri()) return;
+    const s = useConfigStore.getState().settings;
+    if (s.closeToTray) {
+      import("@tauri-apps/api/window").then(({ getCurrentWindow }) => {
+        getCurrentWindow().hide();
+      });
+    } else {
+      import("@tauri-apps/api/window").then(({ getCurrentWindow }) => {
+        getCurrentWindow().close();
+      });
+    }
+  }, []);
+
   // ---- Navigation callbacks ----
 
   const goToTranslation = useCallback(() => setView("translation"), []);
@@ -69,7 +85,11 @@ function App() {
 
   return (
     <div className="flex flex-col h-screen w-screen bg-lexi-bg overflow-hidden">
-      <TitleBar />
+      <TitleBar
+        onCloseRequest={handleCloseRequest}
+        onOpenHistory={() => setView("history")}
+        onOpenSettings={() => setView("settings")}
+      />
       <div className="flex flex-1 min-h-0">
         <Sidebar
           activeView={view}

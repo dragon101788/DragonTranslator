@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { History, Settings } from "lucide-react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 
 function isTauri() {
@@ -7,9 +8,11 @@ function isTauri() {
 
 interface TitleBarProps {
   onCloseRequest?: () => void;
+  onOpenHistory?: () => void;
+  onOpenSettings?: () => void;
 }
 
-export default function TitleBar({ onCloseRequest }: TitleBarProps) {
+export default function TitleBar({ onCloseRequest, onOpenHistory, onOpenSettings }: TitleBarProps) {
   const [maximized, setMaximized] = useState(false);
   const [appWindow, setAppWindow] = useState<ReturnType<typeof getCurrentWindow> | null>(null);
 
@@ -55,7 +58,26 @@ export default function TitleBar({ onCloseRequest }: TitleBarProps) {
     }
   }, [appWindow, onCloseRequest]);
 
-  if (!isTauri()) return null;
+  if (!isTauri()) {
+    // Browser fallback: simple toolbar with nav buttons
+    return (
+      <div className="flex items-center h-10 bg-lexi-bg border-b border-lexi-border shrink-0 select-none px-3 gap-2">
+        <span className="text-sm font-semibold text-lexi-text flex-1">
+          龙图腾翻译
+        </span>
+        {onOpenHistory && (
+          <button onClick={onOpenHistory} className="titlebar-btn-browser" aria-label="翻译历史">
+            <History size={16} />
+          </button>
+        )}
+        {onOpenSettings && (
+          <button onClick={onOpenSettings} className="titlebar-btn-browser" aria-label="设置">
+            <Settings size={16} />
+          </button>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="flex items-center h-8 bg-lexi-bg shrink-0 select-none">
@@ -69,54 +91,49 @@ export default function TitleBar({ onCloseRequest }: TitleBarProps) {
         </span>
       </div>
 
+      {/* Nav buttons */}
+      {onOpenHistory && (
+        <button
+          onClick={onOpenHistory}
+          className="titlebar-btn"
+          aria-label="翻译历史"
+        >
+          <History size={13} />
+        </button>
+      )}
+      {onOpenSettings && (
+        <button
+          onClick={onOpenSettings}
+          className="titlebar-btn"
+          aria-label="设置"
+        >
+          <Settings size={13} />
+        </button>
+      )}
+
       {/* Window controls */}
       <div className="flex h-full">
-        {/* Minimize */}
-        <button
-          onClick={handleMinimize}
-          className="titlebar-btn"
-          aria-label="最小化"
-        >
+        <button onClick={handleMinimize} className="titlebar-btn" aria-label="最小化">
           <svg width="10" height="10" viewBox="0 0 10 10">
-            <line
-              x1="1" y1="5" x2="9" y2="5"
-              stroke="currentColor" strokeWidth="1.2"
-            />
+            <line x1="1" y1="5" x2="9" y2="5" stroke="currentColor" strokeWidth="1.2" />
           </svg>
         </button>
-
-        {/* Maximize / Restore */}
-        <button
-          onClick={handleToggleMaximize}
-          className="titlebar-btn"
-          aria-label={maximized ? "还原" : "最大化"}
-        >
+        <button onClick={handleToggleMaximize} className="titlebar-btn" aria-label={maximized ? "还原" : "最大化"}>
           {maximized ? (
             <svg width="10" height="10" viewBox="0 0 10 10">
-              <rect x="2.5" y="0" width="6.5" height="6.5" rx="0.5"
-                fill="none" stroke="currentColor" strokeWidth="1" />
-              <rect x="0" y="2.5" width="6.5" height="6.5" rx="0.5"
-                fill="var(--color-lexi-bg)" stroke="currentColor" strokeWidth="1" />
+              <rect x="2.5" y="0" width="6.5" height="6.5" rx="0.5" fill="none" stroke="currentColor" strokeWidth="1" />
+              <rect x="0" y="2.5" width="6.5" height="6.5" rx="0.5" fill="var(--color-lexi-bg)" stroke="currentColor" strokeWidth="1" />
             </svg>
           ) : (
             <svg width="10" height="10" viewBox="0 0 10 10">
-              <rect x="0.5" y="0.5" width="9" height="9" rx="0.5"
-                fill="none" stroke="currentColor" strokeWidth="1.2" />
+              <rect x="0.5" y="0.5" width="9" height="9" rx="0.5" fill="none" stroke="currentColor" strokeWidth="1.2" />
             </svg>
           )}
         </button>
-
-        {/* Close */}
-        <button
-          onClick={handleClose}
-          className="titlebar-btn titlebar-btn-close"
-          aria-label="关闭"
-        >
+        <button onClick={handleClose} className="titlebar-btn titlebar-btn-close" aria-label="关闭">
           <svg width="10" height="10" viewBox="0 0 10 10">
-            <line x1="1.5" y1="1.5" x2="8.5" y2="8.5"
-              stroke="currentColor" strokeWidth="1.3" />
-            <line x1="8.5" y1="1.5" x2="1.5" y2="8.5"
-              stroke="currentColor" strokeWidth="1.3" />
+            <line x1="1.5" y1="1.5" x2="8.5" y2="8.5" stroke="currentColor" strokeWidth="1.3" />
+            <line x1="8.5" y1="1.5" x2="1.5" y2="8.5" stroke="currentColor" strokeWidth="1.3" />
           </svg>
         </button>
       </div>
