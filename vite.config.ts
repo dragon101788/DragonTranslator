@@ -21,8 +21,8 @@ export default defineConfig({
   },
 
   server: {
-    port: 5175,
-    strictPort: true,
+    port: 5157,
+    strictPort: false, // fallback to 5158, 5159... if taken
     watch: {
       ignored: ["**/src-tauri/**"],
     },

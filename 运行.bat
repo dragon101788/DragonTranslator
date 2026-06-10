@@ -8,10 +8,12 @@ set "PATH=C:\Program Files (x86)\Windows Kits\10\bin\10.0.26100.0\x64;%PATH%"
 echo ========================================
 echo   DragonTec Translator - Dev Mode
 echo ========================================
-echo   Vite : http://localhost:5175
+echo   Vite : http://localhost:5157
 echo ========================================
 echo.
 
+taskkill /f /im app.exe 2>nul
+taskkill /f /im node.exe /fi "WindowTitle eq *vite*" 2>nul
 npx tauri dev
 
 pause

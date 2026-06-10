@@ -5,7 +5,7 @@
   "identifier": "com.dragontec.translator",
   "build": {
     "frontendDist": "../dist",
-    "devUrl": "http://localhost:5175",
+    "devUrl": "http://localhost:5157",
     "beforeDevCommand": "npm run dev",
     "beforeBuildCommand": "npm run build"
   },

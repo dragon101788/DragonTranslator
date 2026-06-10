@@ -24,7 +24,7 @@
 4. **绿色便携**：配置文件 `dragon-translator-config.json` 紧跟 exe（通过 `resourceDir()` 获取 exe 路径 + 绝对路径传 store），用 `tauri-plugin-store` 持久化，不写注册表
 5. **自定义主题色**：Tailwind v4 `@theme` 块定义 `lexi-*` 色系（深色主题）
 6. **WebDAV 同步**：设置面板支持拉取/推送配置到 WebDAV 服务器
-7. **双重持久化**：Tauri 环境下用文件存储，浏览器 `localhost:5175` 调试时自动降级到 `localStorage`
+7. **双重持久化**：Tauri 环境下用文件存储，浏览器 `localhost:5157` 调试时自动降级到 `localStorage`
 8. **静态链接 CRT**：`.cargo/config.toml` 配置 `crt-static`，生成的 exe 不依赖外部 VC++ 运行时
 
 ## 项目结构
@@ -41,7 +41,7 @@ lexi-desktop/
 │   │   └── config.toml        # crt-static 静态链接，生成零依赖 exe
 │   ├── src/lib.rs             # 插件注册 + Alt+Space 全局快捷键
 │   ├── Cargo.toml             # 依赖：tauri, store, global-shortcut, log
-│   └── tauri.conf.json        # 窗口 860×620, devUrl:5175, bundle 关闭
+│   └── tauri.conf.json        # 窗口 860×620, devUrl:5157, bundle 关闭
 ├── src/                       # React 前端
 │   ├── types/index.ts         # 所有 TS 类型 + 5 个预置智能体 + 默认配置
 │   ├── stores/
@@ -96,13 +96,13 @@ npx tauri dev
 # 输出：根目录\app.exe（配置文件自动创建在同目录）
 ```
 
-Vite 端口：**5175**（vite.config.ts strictPort 指定）
+Vite 端口：**5157**（vite.config.ts strictPort 指定）
 快捷键：**Ctrl+Alt+X**（全局切换窗口显隐，设置面板可自定义）
 
 ## 开发服务自动重启
 
 - **每次修改 `src-tauri/` 下的 Rust 代码后**，必须重启 `npx tauri dev`（前端 HMR 只热更新 TS/JS，不更新 Rust）
-- 重启步骤：先杀旧进程（cargo、app.exe、占用 5175 端口的 node），再 `npx tauri dev`
+- 重启步骤：先杀旧进程（cargo、app.exe、占用 5157 端口的 node），再 `npx tauri dev`
 - 前端代码（`src/**`）改动无需重启，Vite HMR 自动生效
 
 ## 构建环境注意
@@ -115,7 +115,7 @@ Vite 端口：**5175**（vite.config.ts strictPort 指定）
 ## 持久化机制
 
 - **Tauri 端**：通过 `resourceDir()` 获取 exe 所在目录，用绝对路径传给 `tauri-plugin-store`，配置文件紧跟 exe
-- **浏览器端**：`localStorage` 兜底（`localhost:5175` 调试时可用）
+- **浏览器端**：`localStorage` 兜底（`localhost:5157` 调试时可用）
 - **驱动方式**：Zustand `subscribe` 直接订阅三 store（agent/config/history），50ms 去抖 + JSON 比对去重
 - **保存时机**：每次状态变更自动保存 + `beforeunload` 事件 flush 最后数据
 
