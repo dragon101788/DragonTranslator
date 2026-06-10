@@ -190,7 +190,7 @@ export const DEFAULT_PROVIDER: LLMProvider = {
   name: "DeepSeek",
   baseUrl: "https://api.deepseek.com",
   apiKey: "sk-917a35855fc642e897ecce82b28e956d",
-  models: ["deepseek-chat"],
+  models: [],
   isDefault: true,
   createdAt: Date.now(),
 };
