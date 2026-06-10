@@ -206,7 +206,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
     url: "",
     username: "",
     password: "",
-    remotePath: "/lexi/config.json",
+    remotePath: "/dragon-translator-config.json",
     syncOnStart: false,
     lastSync: null,
   },
