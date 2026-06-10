@@ -56,16 +56,18 @@ lexi-desktop/
 │   │   ├── useTranslate.ts    # 翻译 hook（流式输出 + AbortController 停止）
 │   │   └── usePersistence.ts  # 持久化（Tauri 文件 + localStorage 降级，Zustand subscribe 驱动）
 │   ├── components/
-│   │   ├── layout/Sidebar.tsx      # 侧边栏（智能体列表/折叠/底部菜单）
-│   │   ├── layout/MainPanel.tsx    # 主面板（语言选择 → InputArea + OutputArea 各半）
-│   │   ├── layout/HistoryPanel.tsx # 翻译历史（左右分栏：列表+详情）
+│   │   ├── layout/TitleBar.tsx      # 自定义标题栏（拖拽/窗口控制/历史/设置按钮+浏览器兼容）
+│   │   ├── layout/Sidebar.tsx       # 侧边栏（可拖拽调宽/紧凑模式/智能体CRUD）
+│   │   ├── layout/MainPanel.tsx     # 主面板（视图容器/翻译/历史/设置/编辑切换）
+│   │   ├── layout/HistoryPanel.tsx  # 翻译历史（左右分栏：列表+详情）
 │   │   ├── translation/InputArea.tsx  # 输入区（语言选择/交换/Enter翻译/停止按钮）
 │   │   ├── translation/OutputArea.tsx # 输出区（Markdown渲染/自动滚底/复制）
 │   │   ├── agents/AgentEditor.tsx     # 智能体编辑器（图标/名称/提示词/温度/Token）
 │   │   └── settings/
-│   │       ├── SettingsDialog.tsx # 设置面板（API/WebDAV/快捷键/外观 四个Tab）
-│   │       └── ApiConfig.tsx      # API 配置（服务商管理/拉模型列表/测试连接）
-│   ├── App.tsx                # 根组件（Sidebar + MainPanel + 弹窗管理）
+│   │       ├── SettingsDialog.tsx     # 设置面板（API/WebDAV/快捷键/外观 四个Tab）
+│   │       ├── ShortcutTab.tsx        # 快捷键录制器
+│   │       └── ApiConfig.tsx          # API 配置（服务商管理/拉模型列表/测试连接）
+│   ├── App.tsx                # 根组件（视图状态机 + 持久化 + 主题同步）
 │   ├── main.tsx               # ReactDOM 入口
 │   └── index.css              # Tailwind v4 @import + @theme 自定义色 + 动画
 ```
@@ -120,16 +122,19 @@ Vite 端口：**5175**（vite.config.ts strictPort 指定）
 ## 当前状态
 
 - [x] 项目骨架 + Rust 后端（store + global-shortcut 插件）
-- [x] 侧边栏智能体列表（折叠/展开/CRUD）
-- [x] 翻译输入/输出面板（各占一半布局）
+- [x] 侧边栏可拖拽调整宽度 + 紧凑模式 + 右上角按钮
+- [x] 翻译输入/输出面板（可拖拽分割 + 各占一半布局）
 - [x] 流式翻译输出 + 停止按钮 + 自动滚底
 - [x] API 配置 + 拉取模型列表 + 连接测试
-- [x] 智能体编辑器（图标/提示词/温度/Token）
+- [x] 智能体编辑器（图标/名称/提示词/温度/Token）
 - [x] 翻译历史（搜索/收藏/详情）
 - [x] WebDAV 配置同步（拉取/推送）
-- [x] 全局快捷键 Alt+Space（unregister→register 容错）
+- [x] 全局快捷键 Ctrl+Alt+X（设置面板可自定义）
+- [x] 系统托盘（最小化到托盘 + 左键切换 + 右键菜单）
 - [x] 持久化存储（文件 + localStorage 双轨，配置紧跟 exe）
 - [x] 便携打包（静态链接 CRT，bundle 关闭，单 exe 绿色发布）
 - [x] VSCode 集成（任务 + 调试配置）
-- [ ] 浅色主题（当前仅深色）
+- [x] 自绘标题栏（拖拽移动 + 窗口控制按钮）
+- [x] 主题系统（深色 / 月光白 / 暗夜紫）
+- [x] 字号滑块（12–20px，全局缩放）
 - [ ] i18n 多语言界面
