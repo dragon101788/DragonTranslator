@@ -1,19 +1,20 @@
-import { useState, useEffect } from "react";
-import { X, Save } from "lucide-react";
-import type { TranslationAgent, AgentConfig } from "../../types";
+import { useState, useEffect, useCallback } from "react";
+import type { AgentConfig } from "../../types";
 import { useAgentStore } from "../../stores/agentStore";
 
 interface AgentEditorProps {
-  agent: TranslationAgent | null; // null = create new
+  agentId: string | null; // null = create new
   onClose: () => void;
 }
 
 const ICON_OPTIONS = ["💬", "📚", "🎓", "⚡", "🎨", "🤖", "✨", "🔮", "💡", "🌍", "📝", "🎯"];
 
-export default function AgentEditor({ agent, onClose }: AgentEditorProps) {
+export default function AgentEditor({ agentId, onClose }: AgentEditorProps) {
+  const agents = useAgentStore((s) => s.agents);
   const addAgent = useAgentStore((s) => s.addAgent);
   const updateAgent = useAgentStore((s) => s.updateAgent);
-  const isNew = !agent;
+  const isNew = !agentId;
+  const agent = agentId ? agents.find((a) => a.id === agentId) : null;
 
   const [name, setName] = useState(agent?.name ?? "");
   const [icon, setIcon] = useState(agent?.icon ?? "🤖");
@@ -23,12 +24,22 @@ export default function AgentEditor({ agent, onClose }: AgentEditorProps) {
     agent?.config ?? { model: "", temperature: 0.7, maxTokens: 2048 }
   );
 
-  const handleSave = () => {
+  // Sync when switching agents
+  useEffect(() => {
+    setName(agent?.name ?? "");
+    setIcon(agent?.icon ?? "🤖");
+    setDescription(agent?.description ?? "");
+    setSystemPrompt(agent?.systemPrompt ?? "");
+    setConfig(agent?.config ?? { model: "", temperature: 0.7, maxTokens: 2048 });
+  }, [agentId, agent?.name, agent?.icon, agent?.description, agent?.systemPrompt, agent?.config]);
+
+  const saveIfValid = useCallback(() => {
     if (!name.trim() || !systemPrompt.trim()) return;
 
     if (isNew) {
+      const id = `agent-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
       addAgent({
-        id: `agent-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        id,
         name: name.trim(),
         icon,
         description: description.trim(),
@@ -37,8 +48,11 @@ export default function AgentEditor({ agent, onClose }: AgentEditorProps) {
         createdAt: Date.now(),
         updatedAt: Date.now(),
       });
-    } else {
-      updateAgent(agent.id, {
+      // Select the newly created agent and go back to translation
+      useAgentStore.getState().setActiveAgent(id);
+      onClose();
+    } else if (agentId) {
+      updateAgent(agentId, {
         name: name.trim(),
         icon,
         description: description.trim(),
@@ -46,18 +60,20 @@ export default function AgentEditor({ agent, onClose }: AgentEditorProps) {
         config,
       });
     }
+  }, [name, icon, description, systemPrompt, config, isNew, agentId, addAgent, updateAgent, onClose]);
 
-    onClose();
-  };
-
-  // Close on Escape
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [onClose]);
+  // Auto-save on blur for existing agents
+  const handleBlur = useCallback(() => {
+    if (!isNew && agentId && name.trim() && systemPrompt.trim()) {
+      updateAgent(agentId, {
+        name: name.trim(),
+        icon,
+        description: description.trim(),
+        systemPrompt: systemPrompt.trim(),
+        config,
+      });
+    }
+  }, [isNew, agentId, name, icon, description, systemPrompt, config, updateAgent]);
 
   return (
     <div className="flex-1 flex flex-col min-h-0">
@@ -95,17 +111,29 @@ export default function AgentEditor({ agent, onClose }: AgentEditorProps) {
             </div>
 
             <div className="flex-1 space-y-3">
-              <div>
-                <label className="block text-xs text-lexi-text-muted mb-1">
-                  名称 <span className="text-red-400">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="例如：口语化翻译"
-                  className="w-full bg-lexi-input border border-lexi-border rounded-lg px-3 py-2 text-sm text-lexi-text placeholder-lexi-text-muted/40 focus:outline-none focus:ring-1 focus:ring-lexi-accent"
-                />
+              <div className="flex gap-2 items-start">
+                <div className="flex-1">
+                  <label className="block text-xs text-lexi-text-muted mb-1">
+                    名称 <span className="text-red-400">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    onBlur={handleBlur}
+                    placeholder="例如：口语化翻译"
+                    className="w-full bg-lexi-input border border-lexi-border rounded-lg px-3 py-2 text-sm text-lexi-text placeholder-lexi-text-muted/40 focus:outline-none focus:ring-1 focus:ring-lexi-accent"
+                  />
+                </div>
+                {isNew && (
+                  <button
+                    onClick={saveIfValid}
+                    disabled={!name.trim() || !systemPrompt.trim()}
+                    className="mt-5 px-4 py-2 rounded-lg bg-lexi-accent hover:bg-lexi-accent-hover disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-medium transition-all"
+                  >
+                    创建
+                  </button>
+                )}
               </div>
               <div>
                 <label className="block text-xs text-lexi-text-muted mb-1">
@@ -115,6 +143,7 @@ export default function AgentEditor({ agent, onClose }: AgentEditorProps) {
                   type="text"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
+                  onBlur={handleBlur}
                   placeholder="简短描述这个智能体的翻译风格"
                   className="w-full bg-lexi-input border border-lexi-border rounded-lg px-3 py-2 text-sm text-lexi-text placeholder-lexi-text-muted/40 focus:outline-none focus:ring-1 focus:ring-lexi-accent"
                 />
@@ -130,6 +159,7 @@ export default function AgentEditor({ agent, onClose }: AgentEditorProps) {
             <textarea
               value={systemPrompt}
               onChange={(e) => setSystemPrompt(e.target.value)}
+              onBlur={handleBlur}
               placeholder="编写提示词，定义翻译风格、输出格式、约束条件..."
               rows={10}
               className="w-full bg-lexi-input border border-lexi-border rounded-lg px-3 py-2 text-sm text-lexi-text placeholder-lexi-text-muted/40 focus:outline-none focus:ring-1 focus:ring-lexi-accent resize-none font-mono"
@@ -146,6 +176,7 @@ export default function AgentEditor({ agent, onClose }: AgentEditorProps) {
                 type="text"
                 value={config.model}
                 onChange={(e) => setConfig((c) => ({ ...c, model: e.target.value }))}
+                onBlur={handleBlur}
                 placeholder="使用默认模型"
                 className="w-full bg-lexi-input border border-lexi-border rounded-lg px-3 py-2 text-sm text-lexi-text placeholder-lexi-text-muted/40 focus:outline-none focus:ring-1 focus:ring-lexi-accent"
               />
@@ -179,6 +210,7 @@ export default function AgentEditor({ agent, onClose }: AgentEditorProps) {
                 onChange={(e) =>
                   setConfig((c) => ({ ...c, maxTokens: parseInt(e.target.value) }))
                 }
+                onBlur={handleBlur}
                 className="w-full bg-lexi-input border border-lexi-border rounded-lg px-3 py-2 text-sm text-lexi-text focus:outline-none focus:ring-1 focus:ring-lexi-accent"
               >
                 <option value={512}>512</option>
@@ -192,23 +224,17 @@ export default function AgentEditor({ agent, onClose }: AgentEditorProps) {
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="flex items-center justify-end gap-3 px-5 py-4">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 rounded-lg text-sm text-lexi-text-muted hover:bg-lexi-hover transition-colors"
-          >
-            取消
-          </button>
-          <button
-            onClick={handleSave}
-            disabled={!name.trim() || !systemPrompt.trim()}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-lexi-accent hover:bg-lexi-accent-hover disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-medium transition-all"
-          >
-            <Save size={15} />
-            <span>{isNew ? "创建" : "保存"}</span>
-          </button>
-        </div>
+        {/* Footer — only for new agents */}
+        {isNew && (
+          <div className="flex items-center justify-end gap-3 px-5 py-4">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 rounded-lg text-sm text-lexi-text-muted hover:bg-lexi-hover transition-colors"
+            >
+              取消
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

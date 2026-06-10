@@ -13,7 +13,7 @@ type ViewType = "translation" | "agent-editor" | "history" | "settings";
 
 interface MainPanelProps {
   view: ViewType;
-  editingAgent: TranslationAgent | null;
+  editingAgentId: string | null;
   onCloseAgentEditor: () => void;
   onBack: () => void;
   sourceLang: string;
@@ -25,7 +25,7 @@ interface MainPanelProps {
 
 export default function MainPanel({
   view,
-  editingAgent,
+  editingAgentId,
   onCloseAgentEditor,
   onBack,
   sourceLang,
@@ -85,7 +85,7 @@ export default function MainPanel({
   return (
     <div className="flex flex-col h-full bg-lexi-bg">
       {view === "agent-editor" && (
-        <AgentEditor agent={editingAgent} onClose={onCloseAgentEditor} />
+        <AgentEditor agentId={editingAgentId} onClose={onCloseAgentEditor} />
       )}
 
       {view === "history" && (
