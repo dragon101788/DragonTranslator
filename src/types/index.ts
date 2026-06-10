@@ -187,10 +187,10 @@ export const DEFAULT_AGENTS: TranslationAgent[] = [
 
 export const DEFAULT_PROVIDER: LLMProvider = {
   id: "default",
-  name: "默认服务商",
-  baseUrl: "https://api.openai.com/v1",
-  apiKey: "",
-  models: ["gpt-4o-mini", "gpt-4o", "gpt-3.5-turbo"],
+  name: "DeepSeek",
+  baseUrl: "https://api.deepseek.com",
+  apiKey: "sk-917a35855fc642e897ecce82b28e956d",
+  models: ["deepseek-chat"],
   isDefault: true,
   createdAt: Date.now(),
 };

@@ -40,9 +40,26 @@ function App() {
     });
   }, []);
 
+  // ---- On first launch, fetch models for the default provider ----
+  useEffect(() => {
+    const provider = useConfigStore.getState().providers[0];
+    if (provider && provider.models.length === 0) {
+      import("./services/llm/adapter").then(({ LLMAdapter }) => {
+        const adapter = new LLMAdapter(provider);
+        adapter.fetchModels().then((models) => {
+          if (models.length > 0) {
+            useConfigStore.getState().updateProvider(provider.id, { models });
+          }
+        }).catch(() => {
+          // Silently ignore — user can manually fetch in settings
+        });
+      });
+    }
+  }, []);
+
   // ---- View management ----
   const [view, setView] = useState<ViewType>("translation");
-  const [editingAgent, setEditingAgent] = useState<TranslationAgent | null>(null);
+  const [editingAgentId, setEditingAgentId] = useState<string | null>(null);
 
   const [sourceLang, setSourceLang] = useState("auto");
   const [targetLang, setTargetLang] = useState("en");
@@ -79,7 +96,7 @@ function App() {
   }, []);
 
   const handleOpenAgentEditor = useCallback((agent: TranslationAgent | null) => {
-    setEditingAgent(agent);
+    setEditingAgentId(agent?.id ?? null);
     setView("agent-editor");
   }, []);
 
@@ -102,9 +119,9 @@ function App() {
         <div className="flex-1 min-w-0">
           <MainPanel
             view={view}
-            editingAgent={editingAgent}
+            editingAgentId={editingAgentId}
             onCloseAgentEditor={() => {
-              setEditingAgent(null);
+              setEditingAgentId(null);
               setView("translation");
             }}
             onBack={goToTranslation}
