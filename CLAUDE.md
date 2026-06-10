@@ -97,7 +97,7 @@ npx tauri dev
 ```
 
 Vite 端口：**5175**（vite.config.ts strictPort 指定）
-快捷键：**Alt+Space**（全局切换窗口显隐）
+快捷键：**Ctrl+Alt+X**（全局切换窗口显隐，设置面板可自定义）
 
 ## 开发服务自动重启
 
