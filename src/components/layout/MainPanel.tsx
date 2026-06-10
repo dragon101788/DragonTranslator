@@ -7,6 +7,7 @@ import HistoryPanel from "./HistoryPanel";
 import { useTranslate } from "../../hooks/useTranslate";
 import { useAgentStore } from "../../stores/agentStore";
 import { useConfigStore } from "../../stores/configStore";
+import { useTTS } from "../../hooks/useTTS";
 import type { TranslationAgent } from "../../types";
 
 type ViewType = "translation" | "agent-editor" | "history" | "settings";
@@ -39,6 +40,19 @@ export default function MainPanel({
   const activeAgent = useAgentStore((s) => s.getActiveAgent());
   const getActiveProvider = useConfigStore((s) => s.getActiveProvider);
   const getActiveAgent = useAgentStore((s) => s.getActiveAgent);
+  const tts = useTTS();
+
+  // Auto-read result when translation completes
+  const prevTranslating = useRef(translating);
+  useEffect(() => {
+    if (prevTranslating.current && !translating && result) {
+      const s = useConfigStore.getState().settings;
+      if (s.ttsAutoRead) {
+        tts.speak(result.replace(/<[^>]*>/g, ""), "");
+      }
+    }
+    prevTranslating.current = translating;
+  }, [translating, result, tts]);
 
   const handleTranslate = useCallback(
     (text: string) => {

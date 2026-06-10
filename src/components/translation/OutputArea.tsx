@@ -1,7 +1,8 @@
 import { useMemo, useState, useEffect, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { Copy, Check, AlertCircle, Clock, Loader2 } from "lucide-react";
+import { Copy, Check, AlertCircle, Clock, Loader2, Volume2 } from "lucide-react";
+import { useTTS } from "../../hooks/useTTS";
 
 interface OutputAreaProps {
   result: string | null;
@@ -18,6 +19,7 @@ export default function OutputArea({
 }: OutputAreaProps) {
   const [copied, setCopied] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const tts = useTTS();
 
   // Auto-scroll to bottom during streaming
   useEffect(() => {
@@ -60,6 +62,16 @@ export default function OutputArea({
             <Clock size={12} />
             {latency < 1000 ? `${latency}ms` : `${(latency / 1000).toFixed(1)}s`}
           </span>
+        )}
+        {result && !translating && (
+          <button
+            onClick={() => tts.speak(result.replace(/<[^>]*>/g, ""), "")}
+            className="flex items-center gap-1 hover:text-lexi-text transition-colors"
+            title="朗读译文"
+          >
+            <Volume2 size={12} />
+            <span>朗读</span>
+          </button>
         )}
         {result && !translating && (
           <button

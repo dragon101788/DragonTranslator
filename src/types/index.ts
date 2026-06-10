@@ -60,6 +60,9 @@ export interface AppSettings {
   fontSize: number; // px
   // Tray
   closeToTray: boolean;
+  // TTS
+  ttsRate: number;
+  ttsAutoRead: boolean;
 }
 
 export interface WebDAVConfig {
@@ -213,4 +216,6 @@ export const DEFAULT_SETTINGS: AppSettings = {
   theme: "dark",
   fontSize: 14,
   closeToTray: true,
+  ttsRate: 1.0,
+  ttsAutoRead: false,
 };

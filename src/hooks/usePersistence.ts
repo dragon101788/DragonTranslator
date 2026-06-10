@@ -4,6 +4,7 @@ import { useConfigStore } from "../stores/configStore";
 import { useHistoryStore } from "../stores/historyStore";
 import type { Store } from "@tauri-apps/plugin-store";
 import type { TranslationAgent, LLMProvider, AppSettings } from "../types";
+import { DEFAULT_SETTINGS } from "../types";
 
 const STORE_FILENAME = "dragon-translator-config.json";
 const LS_KEY = "dragon-translator-config";
@@ -50,8 +51,13 @@ function applySnapshot(data: PersistedData) {
       providers: data.providers,
       activeProviderId: data.activeProviderId,
     });
-  if (data.settings)
-    useConfigStore.setState({ settings: data.settings });
+  if (data.settings) {
+    // Merge saved settings with defaults so new fields (e.g. ttsRate)
+    // don't remain undefined on old configs.
+    useConfigStore.setState({
+      settings: { ...DEFAULT_SETTINGS, ...data.settings },
+    });
+  }
   if (data.records)
     useHistoryStore.setState({ records: data.records });
 }

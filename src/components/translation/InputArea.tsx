@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Send, X, ArrowLeftRight, StopCircle } from "lucide-react";
+import { Send, X, ArrowLeftRight, StopCircle, Volume2 } from "lucide-react";
+import { useTTS } from "../../hooks/useTTS";
 
 interface InputAreaProps {
   onTranslate: (text: string) => void;
@@ -43,6 +44,7 @@ export default function InputArea({
   const [text, setText] = useState("");
   const [charCount, setCharCount] = useState(0);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const tts = useTTS();
 
   // Auto-focus on mount
   useEffect(() => {
@@ -121,6 +123,15 @@ export default function InputArea({
               title="清空"
             >
               <X size={14} />
+            </button>
+          )}
+          {text && (
+            <button
+              onClick={() => tts.speak(text, sourceLang)}
+              className="p-1 rounded hover:bg-lexi-hover text-lexi-text-muted hover:text-lexi-text transition-colors"
+              title="朗读原文"
+            >
+              <Volume2 size={14} />
             </button>
           )}
           <span className="text-xs text-lexi-text-muted">{charCount}</span>
