@@ -8,7 +8,6 @@ import { useTranslate } from "../../hooks/useTranslate";
 import { useAgentStore } from "../../stores/agentStore";
 import { useConfigStore } from "../../stores/configStore";
 import { useTTS } from "../../hooks/useTTS";
-import type { TranslationAgent } from "../../types";
 
 type ViewType = "translation" | "agent-editor" | "history" | "settings";
 

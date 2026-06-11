@@ -1,9 +1,9 @@
 [package]
-name = "app"
+name = "龙腾翻译"
 version = "0.1.0"
-description = "A Tauri App"
-authors = ["you"]
-license = ""
+description = "龙腾翻译 - 桌面翻译软件"
+authors = ["Dragon"]
+license = "MIT"
 repository = ""
 edition = "2021"
 rust-version = "1.77.2"

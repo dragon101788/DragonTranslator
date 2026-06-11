@@ -112,8 +112,6 @@ function App() {
           activeView={view}
           onSelectAgent={handleSelectAgent}
           onNewAgent={() => handleOpenAgentEditor(null)}
-          onOpenHistory={() => setView("history")}
-          onOpenSettings={() => setView("settings")}
           onEditAgent={handleOpenAgentEditor}
         />
         <div className="flex-1 min-w-0">

@@ -143,7 +143,7 @@ export default function ShortcutTab({ modifiers, keyCode, onSave }: ShortcutTabP
     <div className="space-y-4">
       <h3 className="text-base font-semibold text-lexi-text">全局快捷键</h3>
       <p className="text-sm text-lexi-text-muted">
-        使用全局快捷键在任何应用中快速呼出 龙图腾翻译 窗口。默认 Ctrl+Alt+X。
+        使用全局快捷键在任何应用中快速呼出 龙腾翻译 窗口。默认 Ctrl+Alt+X。
       </p>
 
       {/* Key display + recorder trigger */}

@@ -1,6 +1,6 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "龙图腾翻译",
+  "productName": "龙腾翻译",
   "version": "0.1.0",
   "identifier": "com.dragontec.translator",
   "build": {
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "龙图腾翻译",
+        "title": "龙腾翻译",
         "label": "main",
         "width": 860,
         "height": 620,

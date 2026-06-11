@@ -30,7 +30,7 @@
 ## 项目结构
 
 ```
-lexi-desktop/
+Dragon_translator/
 ├── 运行.bat                    # 双击启动开发模式（自动配 MSVC 环境）
 ├── 打包.bat                    # 双击一键打包便携 exe
 ├── .vscode/

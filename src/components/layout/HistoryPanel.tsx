@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { X, Trash2, Star, Search, Clock, ChevronRight } from "lucide-react";
+import { Trash2, Star, Search, Clock, ChevronRight } from "lucide-react";
 import { useHistoryStore } from "../../stores/historyStore";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -8,7 +8,7 @@ interface HistoryPanelProps {
   onClose: () => void;
 }
 
-export default function HistoryPanel({ onClose }: HistoryPanelProps) {
+export default function HistoryPanel(_props: HistoryPanelProps) {
   const records = useHistoryStore((s) => s.records);
   const deleteRecord = useHistoryStore((s) => s.deleteRecord);
   const toggleFavorite = useHistoryStore((s) => s.toggleFavorite);

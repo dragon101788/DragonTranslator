@@ -63,7 +63,7 @@ export default function TitleBar({ onCloseRequest, onOpenHistory, onOpenSettings
     return (
       <div className="flex items-center h-10 bg-lexi-bg border-b border-lexi-border shrink-0 select-none px-3 gap-2">
         <span className="text-sm font-semibold text-lexi-text flex-1">
-          龙图腾翻译
+          龙腾翻译
         </span>
         {onOpenHistory && (
           <button onClick={onOpenHistory} className="titlebar-btn-browser" aria-label="翻译历史">
@@ -87,7 +87,7 @@ export default function TitleBar({ onCloseRequest, onOpenHistory, onOpenSettings
         onMouseDown={handleMouseDown}
       >
         <span className="text-[11px] text-lexi-text-muted font-medium tracking-wide cursor-default">
-          龙图腾翻译
+          龙腾翻译
         </span>
       </div>
 

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { X, Download, Upload, Globe, Keyboard, Palette, Database, Volume2 } from "lucide-react";
+import { Download, Upload, Globe, Keyboard, Palette, Database, Volume2 } from "lucide-react";
 import ApiConfig from "./ApiConfig";
 import ShortcutTab from "./ShortcutTab";
 import { useConfigStore } from "../../stores/configStore";
