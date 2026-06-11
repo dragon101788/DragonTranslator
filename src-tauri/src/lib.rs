@@ -7,9 +7,10 @@ use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut,
 // Keep our internal state struct name distinct from the plugin's type
 struct RegisteredShortcut(Mutex<Option<Shortcut>>);
 
-/// Ensure only one instance runs. On Windows, uses a named mutex so the
-/// second launch brings the existing window to front instead of starting
-/// a new process.
+/// Ensure only one instance runs. On Windows, uses a named mutex to detect an
+/// existing instance, then signals a named event so the first instance can
+/// activate its window via Tauri's own APIs (avoiding raw Win32 state
+/// manipulation that would desync Tauri/winit's window state).
 #[cfg(windows)]
 fn ensure_single_instance() -> bool {
     use std::ffi::OsStr;
@@ -23,37 +24,38 @@ fn ensure_single_instance() -> bool {
         ) -> *mut std::ffi::c_void;
         fn CloseHandle(hObject: *mut std::ffi::c_void) -> i32;
         fn GetLastError() -> u32;
-        fn FindWindowW(
-            lpClassName: *const u16,
-            lpWindowName: *const u16,
+        fn CreateEventW(
+            lpEventAttributes: *const std::ffi::c_void,
+            bManualReset: i32,
+            bInitialState: i32,
+            lpName: *const u16,
         ) -> *mut std::ffi::c_void;
-        fn SetForegroundWindow(hWnd: *mut std::ffi::c_void) -> i32;
-        fn ShowWindow(hWnd: *mut std::ffi::c_void, nCmdShow: i32) -> i32;
+        fn SetEvent(hEvent: *mut std::ffi::c_void) -> i32;
     }
 
     const ERROR_ALREADY_EXISTS: u32 = 183;
-    const SW_RESTORE: i32 = 9;
 
-    let name: Vec<u16> = OsStr::new("DragonTec-Translator-SingleInstance")
+    let mutex_name: Vec<u16> = OsStr::new("DragonTec-Translator-SingleInstance")
+        .encode_wide()
+        .chain(std::iter::once(0))
+        .collect();
+    let event_name: Vec<u16> = OsStr::new("DragonTec-Translator-ActivateEvent")
         .encode_wide()
         .chain(std::iter::once(0))
         .collect();
 
     unsafe {
-        let handle = CreateMutexW(std::ptr::null(), 0, name.as_ptr());
+        let handle = CreateMutexW(std::ptr::null(), 0, mutex_name.as_ptr());
         if handle.is_null() {
             return true;
         }
         if GetLastError() == ERROR_ALREADY_EXISTS {
             CloseHandle(handle);
-            let title: Vec<u16> = OsStr::new("龙腾翻译")
-                .encode_wide()
-                .chain(std::iter::once(0))
-                .collect();
-            let hwnd = FindWindowW(std::ptr::null(), title.as_ptr());
-            if !hwnd.is_null() {
-                ShowWindow(hwnd, SW_RESTORE);
-                SetForegroundWindow(hwnd);
+            // Signal the existing instance to activate itself via Tauri APIs
+            let evt = CreateEventW(std::ptr::null(), 1, 0, event_name.as_ptr());
+            if !evt.is_null() {
+                SetEvent(evt);
+                CloseHandle(evt);
             }
             return false;
         }
@@ -65,6 +67,52 @@ fn ensure_single_instance() -> bool {
 fn ensure_single_instance() -> bool {
     true
 }
+
+/// Listens on a named event for activation requests from a second instance.
+/// Uses Tauri's own window API so the internal window state stays consistent.
+#[cfg(windows)]
+fn spawn_activate_listener(handle: tauri::AppHandle) {
+    use std::ffi::OsStr;
+    use std::os::windows::ffi::OsStrExt;
+
+    extern "system" {
+        fn CreateEventW(
+            lpEventAttributes: *const std::ffi::c_void,
+            bManualReset: i32,
+            bInitialState: i32,
+            lpName: *const u16,
+        ) -> *mut std::ffi::c_void;
+        fn WaitForSingleObject(
+            hHandle: *mut std::ffi::c_void,
+            dwMilliseconds: u32,
+        ) -> u32;
+        fn ResetEvent(hEvent: *mut std::ffi::c_void) -> i32;
+    }
+
+    let event_name: Vec<u16> = OsStr::new("DragonTec-Translator-ActivateEvent")
+        .encode_wide()
+        .chain(std::iter::once(0))
+        .collect();
+
+    std::thread::spawn(move || unsafe {
+        let evt = CreateEventW(std::ptr::null(), 1, 0, event_name.as_ptr());
+        if evt.is_null() {
+            return;
+        }
+        loop {
+            WaitForSingleObject(evt, std::u32::MAX);
+            if let Some(window) = handle.get_webview_window("main") {
+                let _ = window.show();
+                let _ = window.set_focus();
+                let _ = window.unminimize();
+            }
+            ResetEvent(evt);
+        }
+    });
+}
+
+#[cfg(not(windows))]
+fn spawn_activate_listener(_handle: tauri::AppHandle) {}
 
 fn parse_modifiers(mods: &[String]) -> Modifiers {
     let mut result = Modifiers::empty();
@@ -179,9 +227,9 @@ fn configure_shortcut(
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    // Prevent multiple instances
+    // Prevent multiple instances — exit early if another instance is running
     if cfg!(windows) && !ensure_single_instance() {
-        std::process::exit(0);
+        return;
     }
 
     tauri::Builder::default()
@@ -189,9 +237,6 @@ pub fn run() {
         .plugin(
             tauri_plugin_global_shortcut::Builder::default()
                 .with_handler(|app, shortcut, event: ShortcutEvent| {
-                    // Only respond to Pressed — the handler fires on
-                    // both Pressed and Released, and we don't want to
-                    // toggle the window twice.
                     use tauri_plugin_global_shortcut::ShortcutState as GShortcutState;
                     if event.state != GShortcutState::Pressed {
                         return;
@@ -224,6 +269,9 @@ pub fn run() {
             // Manage shortcut state (actual registration happens on the
             // frontend side via configure_shortcut during startup)
             app.manage(RegisteredShortcut(Mutex::new(None)));
+
+            // Start the single-instance activation listener (Windows only)
+            spawn_activate_listener(app.handle().clone());
 
             // ---- System tray ----
             let show_item = MenuItemBuilder::with_id("show", "显示窗口").build(app)?;

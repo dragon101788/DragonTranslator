@@ -28,7 +28,7 @@ function App() {
     return unsub;
   }, []);
 
-  // ---- Persistence + sync shortcut from settings to Rust on startup ----
+  // ---- Sync shortcut from settings to Rust, reactively ----
   useEffect(() => {
     if (!isTauri()) return;
     const s = useConfigStore.getState().settings;
@@ -38,6 +38,22 @@ function App() {
         key: s.shortcutKey,
       }).catch(console.error);
     });
+  }, []);
+
+  // Watch for settings changes that may be loaded from persistence
+  // after mount, and re-register the shortcut if needed
+  useEffect(() => {
+    if (!isTauri()) return;
+    const unsub = useConfigStore.subscribe((state, prev) => {
+      const mods = state.settings.shortcutModifiers;
+      const key = state.settings.shortcutKey;
+      if (mods !== prev.settings.shortcutModifiers || key !== prev.settings.shortcutKey) {
+        import("@tauri-apps/api/core").then(({ invoke }) => {
+          invoke("configure_shortcut", { modifiers: mods, key }).catch(console.error);
+        });
+      }
+    });
+    return unsub;
   }, []);
 
   // ---- On first launch, fetch models for the default provider ----
