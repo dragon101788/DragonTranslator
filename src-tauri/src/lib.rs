@@ -205,11 +205,14 @@ pub fn run() {
                     if let Some(ref active) = active {
                         if shortcut.eq(active) {
                             if let Some(window) = app.get_webview_window("main") {
-                                if window.is_visible().unwrap_or(false) {
+                                let is_visible = window.is_visible().unwrap_or(false);
+                                let is_minimized = window.is_minimized().unwrap_or(false);
+                                if is_visible && !is_minimized {
                                     let _ = window.hide();
                                 } else {
                                     let _ = window.show();
                                     let _ = window.set_focus();
+                                    let _ = window.unminimize();
                                 }
                             }
                         }
