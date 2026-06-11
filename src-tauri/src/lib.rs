@@ -7,6 +7,65 @@ use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut,
 // Keep our internal state struct name distinct from the plugin's type
 struct RegisteredShortcut(Mutex<Option<Shortcut>>);
 
+/// Ensure only one instance runs. On Windows, uses a named mutex so the
+/// second launch brings the existing window to front instead of starting
+/// a new process.
+#[cfg(windows)]
+fn ensure_single_instance() -> bool {
+    use std::ffi::OsStr;
+    use std::os::windows::ffi::OsStrExt;
+
+    extern "system" {
+        fn CreateMutexW(
+            lpMutexAttributes: *const std::ffi::c_void,
+            bInitialOwner: i32,
+            lpName: *const u16,
+        ) -> *mut std::ffi::c_void;
+        fn CloseHandle(hObject: *mut std::ffi::c_void) -> i32;
+        fn GetLastError() -> u32;
+        fn FindWindowW(
+            lpClassName: *const u16,
+            lpWindowName: *const u16,
+        ) -> *mut std::ffi::c_void;
+        fn SetForegroundWindow(hWnd: *mut std::ffi::c_void) -> i32;
+        fn ShowWindow(hWnd: *mut std::ffi::c_void, nCmdShow: i32) -> i32;
+    }
+
+    const ERROR_ALREADY_EXISTS: u32 = 183;
+    const SW_RESTORE: i32 = 9;
+
+    let name: Vec<u16> = OsStr::new("DragonTec-Translator-SingleInstance")
+        .encode_wide()
+        .chain(std::iter::once(0))
+        .collect();
+
+    unsafe {
+        let handle = CreateMutexW(std::ptr::null(), 0, name.as_ptr());
+        if handle.is_null() {
+            return true;
+        }
+        if GetLastError() == ERROR_ALREADY_EXISTS {
+            CloseHandle(handle);
+            let title: Vec<u16> = OsStr::new("龙腾翻译")
+                .encode_wide()
+                .chain(std::iter::once(0))
+                .collect();
+            let hwnd = FindWindowW(std::ptr::null(), title.as_ptr());
+            if !hwnd.is_null() {
+                ShowWindow(hwnd, SW_RESTORE);
+                SetForegroundWindow(hwnd);
+            }
+            return false;
+        }
+    }
+    true
+}
+
+#[cfg(not(windows))]
+fn ensure_single_instance() -> bool {
+    true
+}
+
 fn parse_modifiers(mods: &[String]) -> Modifiers {
     let mut result = Modifiers::empty();
     for m in mods {
@@ -120,6 +179,11 @@ fn configure_shortcut(
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // Prevent multiple instances
+    if cfg!(windows) && !ensure_single_instance() {
+        std::process::exit(0);
+    }
+
     tauri::Builder::default()
         .plugin(tauri_plugin_store::Builder::default().build())
         .plugin(
