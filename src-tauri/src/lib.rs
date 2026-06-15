@@ -186,6 +186,22 @@ fn parse_code(key: &str) -> Result<Code, String> {
     }
 }
 
+/// Open the config directory ~/Dragon/Translator/ in File Explorer.
+#[tauri::command]
+fn open_user_dir() -> Result<(), String> {
+    let home = std::env::var("USERPROFILE")
+        .or_else(|_| std::env::var("HOME"))
+        .map_err(|_| "无法获取用户目录".to_string())?;
+    let config_dir = format!("{}\\Dragon\\Translator", home.trim_end_matches('\\'));
+    // Ensure directory exists before opening
+    let _ = std::fs::create_dir_all(&config_dir);
+    std::process::Command::new("explorer")
+        .arg(&config_dir)
+        .spawn()
+        .map_err(|e| format!("无法打开目录: {}", e))?;
+    Ok(())
+}
+
 #[tauri::command]
 fn configure_shortcut(
     app: tauri::AppHandle,
@@ -326,7 +342,7 @@ pub fn run() {
 
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![configure_shortcut])
+        .invoke_handler(tauri::generate_handler![configure_shortcut, open_user_dir])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

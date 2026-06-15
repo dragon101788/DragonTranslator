@@ -6,7 +6,7 @@ import type { Store } from "@tauri-apps/plugin-store";
 import type { TranslationAgent, LLMProvider, AppSettings } from "../types";
 import { DEFAULT_SETTINGS } from "../types";
 
-const STORE_FILENAME = "dragon-translator-config.json";
+const STORE_FILENAME = "config.json";
 const LS_KEY = "dragon-translator-config";
 
 interface PersistedData {
@@ -69,11 +69,10 @@ let _storePromise: Promise<Store> | null = null;
 async function getStore(): Promise<Store> {
   if (!_storePromise) {
     _storePromise = (async () => {
-      // Resolve absolute path next to the exe (portable) or in app data dir
-      const { resourceDir } = await import("@tauri-apps/api/path");
-      const base = await resourceDir();
-      // In production resourceDir = exe folder; store lives next to exe
-      const storePath = `${base}${base.endsWith("\\") || base.endsWith("/") ? "" : "\\"}${STORE_FILENAME}`;
+      // Store config in ~/Dragon/Translator/config.json
+      const { homeDir } = await import("@tauri-apps/api/path");
+      const base = await homeDir();
+      const storePath = `${base}${base.endsWith("\\") || base.endsWith("/") ? "" : "\\"}Dragon\\Translator\\${STORE_FILENAME}`;
       const { load } = await import("@tauri-apps/plugin-store");
       return load(storePath, { autoSave: true, defaults: {} });
     })().catch((e) => {

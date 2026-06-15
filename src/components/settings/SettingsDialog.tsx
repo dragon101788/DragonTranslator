@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Download, Upload, Globe, Keyboard, Palette, Database, Volume2 } from "lucide-react";
+import { Download, Upload, Globe, Keyboard, Palette, Database, Volume2, FolderOpen } from "lucide-react";
 import ApiConfig from "./ApiConfig";
 import ShortcutTab from "./ShortcutTab";
 import { useConfigStore } from "../../stores/configStore";
@@ -116,6 +116,18 @@ export default function SettingsDialog({ onClose }: SettingsDialogProps) {
       setSyncStatus(`❌ 同步失败: ${e.message}`);
     }
   };
+
+  const handleOpenUserDir = async () => {
+    try {
+      const { invoke } = await import("@tauri-apps/api/core");
+      await invoke("open_user_dir");
+    } catch (e) {
+      // silent — Tauri env only
+    }
+  };
+
+  const isTauri =
+    typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 
   return (
     <div className="flex-1 flex flex-col min-h-0 h-full">
@@ -410,6 +422,22 @@ export default function SettingsDialog({ onClose }: SettingsDialogProps) {
             )}
           </div>
         </div>
+
+        {/* Config file location footer */}
+        {isTauri && (
+          <div className="flex items-center justify-between px-5 py-2.5 border-t border-lexi-border">
+            <span className="text-xs text-lexi-text-muted">
+              配置文件: ~\Dragon\Translator\config.json
+            </span>
+            <button
+              onClick={handleOpenUserDir}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-lexi-accent-hover hover:bg-lexi-accent/10 transition-colors"
+            >
+              <FolderOpen size={13} />
+              <span>打开配置目录</span>
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
