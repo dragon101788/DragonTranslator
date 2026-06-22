@@ -155,18 +155,49 @@ async function persistNow() {
   }
 }
 
+async function loadDefaults() {
+  if (isTauriEnv()) {
+    try {
+      const { invoke } = await import("@tauri-apps/api/core");
+      const json = await invoke<string>("get_default_config");
+      const raw = JSON.parse(json) as {
+        providers: LLMProvider[];
+        settings: AppSettings;
+        agents: TranslationAgent[];
+      };
+      const data: PersistedData = {
+        ...raw,
+        activeAgentId: raw.agents[0]?.id ?? null,
+        activeProviderId: raw.providers[0]?.id ?? null,
+        records: [],
+      };
+      applySnapshot(data);
+      console.log("[Persistence] ✅ Defaults loaded from embedded config");
+      return;
+    } catch (e) {
+      console.error("[Persistence] ❌ get_default_config failed:", e);
+    }
+  }
+  // Browser fallback: use built-in TS defaults (stores already initialized)
+  console.log("[Persistence] 📄 Using built-in defaults");
+}
+
 async function loadPersisted() {
   if (isTauriEnv()) {
     try {
       const loaded = await loadFromFile();
-      if (!loaded) console.log("[Persistence] 📄 No saved data, using defaults");
+      if (loaded) return;
+      // No saved data → load embedded defaults
+      await loadDefaults();
       return;
     } catch (e) {
       console.error("[Persistence] ❌ Load from disk failed:", e);
     }
   } else {
     const loaded = loadFromLocalStorage();
-    if (!loaded) console.log("[Persistence] 📄 No saved data, using defaults");
+    if (!loaded) {
+      await loadDefaults();
+    }
   }
 }
 

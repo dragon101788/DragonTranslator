@@ -1,0 +1,86 @@
+{
+  "providers": [
+    {
+      "id": "default",
+      "name": "DeepSeek",
+      "baseUrl": "https://api.deepseek.com",
+      "apiKey": "sk-917a35855fc642e897ecce82b28e956d",
+      "models": [],
+      "isDefault": true,
+      "createdAt": 0
+    }
+  ],
+  "settings": {
+    "shortcutModifiers": ["Ctrl", "Alt"],
+    "shortcutKey": "X",
+    "defaultSourceLang": "auto",
+    "defaultTargetLang": "en",
+    "alwaysOnTop": false,
+    "webdav": {
+      "enabled": false,
+      "url": "",
+      "username": "",
+      "password": "",
+      "remotePath": "/dragon-translator-config.json",
+      "syncOnStart": false,
+      "lastSync": null
+    },
+    "theme": "dark",
+    "fontSize": 14,
+    "closeToTray": true,
+    "ttsRate": 1.0,
+    "ttsAutoRead": false
+  },
+  "agents": [
+    {
+      "id": "agent-colloquial",
+      "name": "口语化翻译",
+      "icon": "💬",
+      "description": "翻译更口语化，贴合英语思维，限定B1等级词汇",
+      "systemPrompt": "你是一个专业的口语化翻译助手。请将用户输入翻译成地道的英语口语表达。\n\n翻译要求：\n1. 使用英语B1等级（中级）词汇，避免生僻词和高级词汇\n2. 表达要自然、口语化，像母语者日常对话一样\n3. 贴合英语思维，避免中式英语（Chinglish）\n4. 如果遇到成语、俗语，用意译而非直译\n5. 保持原文的语气和情感色彩\n\n请直接输出翻译结果，不需要额外说明。",
+      "config": { "model": "", "temperature": 0.7, "maxTokens": 2048 },
+      "createdAt": 0,
+      "updatedAt": 0
+    },
+    {
+      "id": "agent-learning",
+      "name": "学习翻译",
+      "icon": "📚",
+      "description": "翻译 + 语法剖析 + 词汇详解，适合英语学习",
+      "systemPrompt": "你是一个专业的英语学习翻译助手。请按以下格式输出翻译结果：\n\n### 📝 翻译\n\n[给出地道、准确的翻译，贴合英语思维]\n\n### 🔍 语法剖析\n\n[分析原文的关键语法结构，说明翻译时用到的语法点，包括但不限于：时态、语态、从句类型、非谓语动词、虚拟语气等]\n\n### 📖 词汇详解\n\n| 原文词汇 | 翻译 | 词性 | 用法说明 |\n|---------|------|------|---------|\n| ... | ... | ... | ... |\n\n[挑选3-5个值得学习的词汇或短语进行详解]\n\n### 💡 学习提示\n\n[给出1-2条针对此句翻译的学习建议或拓展知识]\n\n请确保翻译地道准确，语法分析清晰易懂。",
+      "config": { "model": "", "temperature": 0.5, "maxTokens": 4096 },
+      "createdAt": 0,
+      "updatedAt": 0
+    },
+    {
+      "id": "agent-academic",
+      "name": "学术翻译",
+      "icon": "🎓",
+      "description": "正式学术风格，适合论文、报告翻译",
+      "systemPrompt": "你是一个专业的学术翻译助手。请将用户输入翻译成正式、严谨的英语学术表达。\n\n翻译要求：\n1. 使用正式的学术风格，措辞严谨\n2. 保持专业术语的准确性，必要时保留原文术语并加括号注释\n3. 句式结构清晰，逻辑严密，避免口语化表达\n4. 符合学术论文的语言规范\n5. 如有引用或文献，保留原格式\n\n请直接输出翻译结果。如遇到有争议的专业术语，在译文后以注释形式说明。",
+      "config": { "model": "", "temperature": 0.3, "maxTokens": 4096 },
+      "createdAt": 0,
+      "updatedAt": 0
+    },
+    {
+      "id": "agent-quick",
+      "name": "快速翻译",
+      "icon": "⚡",
+      "description": "极简翻译，只输出结果，速度优先",
+      "systemPrompt": "你是一个快速翻译助手。请将用户输入翻译成目标语言。\n\n要求：只输出翻译结果，不要任何解释、注释或额外内容。保持原意，简洁准确。",
+      "config": { "model": "", "temperature": 0.1, "maxTokens": 1024 },
+      "createdAt": 0,
+      "updatedAt": 0
+    },
+    {
+      "id": "agent-creative",
+      "name": "创意翻译",
+      "icon": "🎨",
+      "description": "意译优先，文化适配，成语本地化",
+      "systemPrompt": "你是一个创意翻译助手。请将用户输入翻译成富有表现力的目标语言表达。\n\n翻译要求：\n1. 意译优先于直译，追求表达的生动性和感染力\n2. 成语、俗语、文化梗要做本地化适配，找到目标语言中的对应表达\n3. 可以适当调整句式结构，让译文更符合目标语言的表达习惯\n4. 保持原文的情感和风格，但允许创造性改写\n5. 如遇到双关语、诗歌、歌词等，优先保留其艺术效果\n\n请直接输出翻译结果。如果做了较大的意译调整，在译文后用一句话简要说明你的处理思路。",
+      "config": { "model": "", "temperature": 0.9, "maxTokens": 4096 },
+      "createdAt": 0,
+      "updatedAt": 0
+    }
+  ]
+}

@@ -1,3 +1,5 @@
+mod user_files;
+
 use std::sync::Mutex;
 use tauri::Manager;
 use tauri::menu::{MenuBuilder, MenuItemBuilder};
@@ -186,6 +188,19 @@ fn parse_code(key: &str) -> Result<Code, String> {
     }
 }
 
+/// Read the embedded default-config.json (dev: user/ in source tree; release: embedded).
+#[tauri::command]
+fn get_default_config() -> Result<String, String> {
+    user_files::get_default_config_json()
+}
+
+/// Ensure runtime files (gguf, default-config.json, etc.) are present.
+/// Call at startup and after updates. Returns a list of what was released.
+#[tauri::command]
+fn ensure_user_files() -> Result<Vec<String>, String> {
+    user_files::ensure_user_files()
+}
+
 /// Open the config directory ~/Dragon/Translator/ in File Explorer.
 #[tauri::command]
 fn open_user_dir() -> Result<(), String> {
@@ -289,6 +304,17 @@ pub fn run() {
             // Start the single-instance activation listener (Windows only)
             spawn_activate_listener(app.handle().clone());
 
+            // Ensure runtime dependency files are released
+            // (handles both debug and release modes internally)
+            match user_files::ensure_user_files() {
+                Ok(log) => {
+                    for entry in &log {
+                        println!("[UserFiles] {}", entry);
+                    }
+                }
+                Err(e) => eprintln!("[UserFiles] 错误: {}", e),
+            }
+
             // ---- System tray ----
             let show_item = MenuItemBuilder::with_id("show", "显示窗口").build(app)?;
             let quit_item = MenuItemBuilder::with_id("quit", "退出").build(app)?;
@@ -342,7 +368,12 @@ pub fn run() {
 
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![configure_shortcut, open_user_dir])
+        .invoke_handler(tauri::generate_handler![
+            configure_shortcut,
+            open_user_dir,
+            get_default_config,
+            ensure_user_files,
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
