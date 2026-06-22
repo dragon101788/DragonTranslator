@@ -46,9 +46,25 @@ export default function InputArea({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const tts = useTTS();
 
-  // Auto-focus on mount
+  // Auto-focus on mount and whenever window becomes visible
   useEffect(() => {
     textareaRef.current?.focus();
+  }, []);
+
+  // Re-focus when the Tauri window is shown (shortcut toggles visibility)
+  useEffect(() => {
+    const focusInput = () => {
+      // Small delay so the window has fully surfaced before focusing
+      setTimeout(() => textareaRef.current?.focus(), 0);
+    };
+    window.addEventListener("focus", focusInput);
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible") focusInput();
+    });
+    return () => {
+      window.removeEventListener("focus", focusInput);
+      document.removeEventListener("visibilitychange", focusInput);
+    };
   }, []);
 
   const handleSubmit = useCallback(() => {
