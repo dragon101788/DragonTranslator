@@ -26,6 +26,7 @@
 6. **WebDAV 同步**：设置面板支持拉取/推送配置到 WebDAV 服务器
 7. **双重持久化**：Tauri 环境下用文件存储，浏览器 `localhost:5157` 调试时自动降级到 `localStorage`
 8. **静态链接 CRT**：`.cargo/config.toml` 配置 `crt-static`，生成的 exe 不依赖外部 VC++ 运行时
+9. **User 目录编译期嵌入**：`user/` 目录在 `build.rs` 编译期扫描，通过 `include_bytes!` 嵌入 exe。首次运行（或版本更新时 mtime 变更）自动释放到 `~/Dragon/Translator/`，实现附加资源（模型文件、默认配置等）的绿色打包与更新
 
 ## 项目结构
 
@@ -36,14 +37,20 @@ Dragon_translator/
 ├── .vscode/
 │   ├── tasks.json             # VSCode 任务：启动开发(Ctrl+Shift+B) / 打包 / 打开输出
 │   └── launch.json            # VSCode 调试：MSVC 调试器附加 Rust 后端
+├── user/                       # 运行时附加资源（编译期嵌入 exe，首次运行释放）
+│   └── default-config.json     # 默认配置模板（providers + settings + agents）
 ├── src-tauri/                 # Rust 后端
 │   ├── .cargo/
 │   │   └── config.toml        # crt-static 静态链接，生成零依赖 exe
-│   ├── src/lib.rs             # 插件注册 + Alt+Space 全局快捷键
-│   ├── Cargo.toml             # 依赖：tauri, store, global-shortcut, log
+│   ├── build.rs                # 编译期扫描 user/，复制到 OUT_DIR，生成带 mtime 的 manifest
+│   ├── src/
+│   │   ├── lib.rs              # 插件注册 + 快捷键 + setup 调用释放
+│   │   ├── user_files.rs       # user/ 嵌入与释放模块（include_bytes! + mtime 比较）
+│   │   └── main.rs             # Rust 入口
+│   ├── Cargo.toml             # 依赖：tauri, store, global-shortcut, serde_json
 │   └── tauri.conf.json        # 窗口 860×620, devUrl:5157, bundle 关闭
 ├── src/                       # React 前端
-│   ├── types/index.ts         # 所有 TS 类型 + 5 个预置智能体 + 默认配置
+│   ├── types/index.ts         # 所有 TS 类型（默认值已移至 user/default-config.json）
 │   ├── stores/
 │   │   ├── agentStore.ts      # 智能体 CRUD（增删改查/复制/重置）
 │   │   ├── configStore.ts     # API 服务商 + 应用设置
@@ -112,9 +119,45 @@ Vite 端口：**5157**（vite.config.ts strictPort 指定）
 - MSVC 版本：14.44.35207，Windows SDK：10.0.26100.0
 - `dev.bat` 已包含完整的 PATH 配置
 
+## User 目录编译期嵌入机制
+
+**技术**: `build.rs` + `include_bytes!` + 逐文件 mtime 比较
+
+`user/` 目录存放运行时附加资源（GGUF 模型、默认配置模板等），在编译期全部嵌入 exe，首次运行自动释放。
+
+### 构建阶段 (`build.rs`)
+
+1. 递归扫描 `user/` 下所有文件，记录 `(相对路径, mtime)`
+2. 复制文件到 `OUT_DIR/.user_content/`
+3. 生成 `user_manifest.rs`，每个文件一条 `include_bytes!` + mtime 常量
+4. `println!("cargo:rerun-if-changed=...")` 确保 user/ 内任何文件变动自动触发重编译
+
+### 运行阶段 (`user_files.rs`)
+
+| 模式 | 读取方式 |
+|------|----------|
+| `debug_assertions` | 直接读开发目录 `user/`，即改即用 |
+| `release` | 读 `include_bytes!` 嵌入的二进制数据 |
+
+**释放策略** (调用 `ensure_user_files()`)：
+- **目标目录**: `~/Dragon/Translator/`（直接平级，无子目录）
+- **逐文件 mtime 比较**: 嵌入 mtime > 磁盘 mtime → 覆盖释放（版本更新时自动替换旧资源）
+- **`default-config.json` 特殊处理**: 释放到目标目录后，仅当 `config.json` 不存在时，复制并包装为 `{"app": ...}`（`tauri-plugin-store` 格式），**绝不覆盖**已有用户配置
+
+**前端兜底**: 若 `loadPersisted()` 发现无缓存数据，调用 `get_default_config` Tauri 命令获取嵌入的默认配置 JSON，初始化 store 后自动保存
+
+### Tauri 命令
+
+| 命令 | 用途 |
+|------|------|
+| `ensure_user_files` | 释放 user/ 文件到 `~/Dragon/Translator/`，返回释放日志 |
+| `get_default_config` | 返回 `default-config.json` 原始内容（前端降级兜底） |
+| `open_user_dir` | 打开资源管理器到 `~/Dragon/Translator/` |
+
 ## 持久化机制
 
-- **Tauri 端**：通过 `resourceDir()` 获取 exe 所在目录，用绝对路径传给 `tauri-plugin-store`，配置文件紧跟 exe
+- **Tauri 端**：配置文件存于 `~/Dragon/Translator/config.json`，首次运行由 `default-config.json` 播种
+- **存储格式**：`tauri-plugin-store` 格式 `{"app": {...}}`
 - **浏览器端**：`localStorage` 兜底（`localhost:5157` 调试时可用）
 - **驱动方式**：Zustand `subscribe` 直接订阅三 store（agent/config/history），50ms 去抖 + JSON 比对去重
 - **保存时机**：每次状态变更自动保存 + `beforeunload` 事件 flush 最后数据
@@ -137,4 +180,5 @@ Vite 端口：**5157**（vite.config.ts strictPort 指定）
 - [x] 自绘标题栏（拖拽移动 + 窗口控制按钮）
 - [x] 主题系统（深色 / 月光白 / 暗夜紫）
 - [x] 字号滑块（12–20px，全局缩放）
+- [x] user/ 编译期嵌入 + 逐文件 mtime 释放 + 默认配置播种
 - [ ] i18n 多语言界面
