@@ -58,8 +58,6 @@ export function useMultiTranslate() {
       initCards(providers, agent);
       setAnyTranslating(true);
 
-      const startAll = Date.now();
-
       // Start all providers in parallel (fire-and-forget per provider)
       for (const provider of providers) {
         const controller = new AbortController();

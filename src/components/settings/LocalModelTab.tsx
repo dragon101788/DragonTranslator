@@ -86,7 +86,6 @@ export default function LocalModelTab() {
           models: [],
           isDefault: false,
           createdAt: Date.now(),
-          updatedAt: Date.now(),
         });
         const models = await adapter.fetchModels();
         if (models.length > 0) {
@@ -207,7 +206,7 @@ export default function LocalModelTab() {
               </button>
             ) : (
               <button
-                onClick={handleStart}
+                onClick={() => handleStart()}
                 disabled={loading}
                 className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-lexi-accent/15 hover:bg-lexi-accent/25 text-lexi-accent-hover text-sm font-medium transition-colors disabled:opacity-50"
               >
