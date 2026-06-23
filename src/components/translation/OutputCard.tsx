@@ -1,6 +1,7 @@
 import { useRef, useEffect } from "react";
-import { StopCircle, Copy, Check, Loader2, Cloud, Cpu } from "lucide-react";
+import { StopCircle, Copy, Check, Loader2, Cloud, Cpu, Volume2 } from "lucide-react";
 import type { CardStream } from "../../hooks/useMultiTranslate";
+import { useTTS } from "../../hooks/useTTS";
 
 interface OutputCardProps {
   card: CardStream;
@@ -15,6 +16,7 @@ export default function OutputCard({
   copyState,
   onCopy,
 }: OutputCardProps) {
+  const tts = useTTS();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Auto-scroll when streaming
@@ -63,20 +65,29 @@ export default function OutputCard({
             <button
               onClick={() => onStop(card.providerId)}
               className="p-1 rounded hover:bg-red-500/10 text-red-400 transition-colors"
-              title="停止此卡片"
+              title="停止"
             >
               <StopCircle size={13} />
             </button>
           ) : card.result ? (
-            <button
-              onClick={() => {
-                if (card.result) onCopy(card.providerId, card.result);
-              }}
-              className="p-1 rounded hover:bg-lexi-hover text-lexi-text-muted hover:text-lexi-text transition-colors"
-              title="复制"
-            >
-              {copied ? <Check size={13} /> : <Copy size={13} />}
-            </button>
+            <>
+              <button
+                onClick={() => {
+                  if (card.result) onCopy(card.providerId, card.result);
+                }}
+                className="p-1 rounded hover:bg-lexi-hover text-lexi-text-muted hover:text-lexi-text transition-colors"
+                title="复制"
+              >
+                {copied ? <Check size={13} /> : <Copy size={13} />}
+              </button>
+              <button
+                onClick={() => tts.speak(card.result!.replace(/<[^>]*>/g, ""), "")}
+                className="p-1 rounded hover:bg-lexi-hover text-lexi-text-muted hover:text-lexi-text transition-colors"
+                title="朗读"
+              >
+                <Volume2 size={13} />
+              </button>
+            </>
           ) : null}
         </div>
       </div>
