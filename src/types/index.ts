@@ -125,7 +125,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   ttsRate: 1.0,
   ttsAutoRead: false,
   localModel: {
-    enabled: false,
+    enabled: true,
     port: 5158,
     model: "qwen3-0.6b-q4_k_m.gguf",
   },

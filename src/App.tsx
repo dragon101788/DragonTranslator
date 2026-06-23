@@ -16,18 +16,64 @@ function isTauri() {
 function App() {
   usePersistence();
 
-  // ---- Auto-start local model (llamafile) if enabled ----
+  // ---- Auto-start local model (llamafile) + register provider ----
   useEffect(() => {
     if (!isTauri()) return;
-    // Delay to allow persistence to load settings
-    const timer = setTimeout(() => {
+    const timer = setTimeout(async () => {
       const { localModel } = useConfigStore.getState().settings;
-      if (localModel.enabled) {
-        import("@tauri-apps/api/core").then(({ invoke }) => {
-          invoke<string>("start_local_model", { port: localModel.port })
-            .then((msg) => console.log("[LocalModel]", msg))
-            .catch(console.error);
+      if (!localModel.enabled) return;
+      try {
+        const { invoke } = await import("@tauri-apps/api/core");
+        const msg = await invoke<string>("start_local_model", {
+          port: localModel.port,
         });
+        console.log("[LocalModel]", msg);
+
+        // Auto-register local provider
+        const localUrl = `http://127.0.0.1:${localModel.port}/v1`;
+        const state = useConfigStore.getState();
+        const existing = state.providers.find((p) => p.id === "local");
+        if (existing) {
+          state.updateProvider("local", { baseUrl: localUrl, apiKey: "local" });
+        } else {
+          state.addProvider({
+            id: "local",
+            name: "本地模型 (Qwen3)",
+            baseUrl: localUrl,
+            apiKey: "local",
+            models: [],
+            isDefault: false,
+            createdAt: Date.now(),
+          });
+        }
+        // Set as active if no other provider configured
+        if (state.providers.length === 1) {
+          state.setActiveProvider("local");
+        }
+
+        // Fetch model list
+        try {
+          const { LLMAdapter } = await import(
+            "./services/llm/adapter"
+          );
+          const adapter = new LLMAdapter({
+            id: "local",
+            name: "本地模型",
+            baseUrl: localUrl,
+            apiKey: "local",
+            models: [],
+            isDefault: false,
+            createdAt: Date.now(),
+          });
+          const models = await adapter.fetchModels();
+          if (models.length > 0) {
+            state.updateProvider("local", { models });
+          }
+        } catch {
+          // optional
+        }
+      } catch (e) {
+        console.error("[LocalModel]", e);
       }
     }, 1500);
     return () => clearTimeout(timer);

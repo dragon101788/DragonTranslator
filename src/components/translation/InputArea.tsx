@@ -51,6 +51,20 @@ export default function InputArea({
     textareaRef.current?.focus();
   }, []);
 
+  // Set initial height
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "auto";
+    }
+  }, []);
+
+  // Reset textarea height when cleared
+  useEffect(() => {
+    if (!text && textareaRef.current) {
+      textareaRef.current.style.height = "auto";
+    }
+  }, [text]);
+
   // Re-focus when the Tauri window is shown (shortcut toggles visibility)
   useEffect(() => {
     const focusInput = () => {
@@ -92,9 +106,9 @@ export default function InputArea({
   };
 
   return (
-    <div className="flex flex-col h-full bg-lexi-card border border-lexi-border overflow-hidden">
+    <div className="flex flex-col bg-lexi-card border border-lexi-border rounded-xl overflow-hidden">
       {/* Lang selector + controls bar */}
-      <div className="flex items-center justify-between px-3 py-2 border-b border-lexi-border/50">
+      <div className="flex items-center justify-between px-3 py-2 border-b border-lexi-border/50 select-none">
         <div className="flex items-center gap-2 text-sm">
           <select
             value={sourceLang}
@@ -154,25 +168,26 @@ export default function InputArea({
         </div>
       </div>
 
-      {/* Textarea */}
-      <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-        <textarea
-          ref={textareaRef}
-          value={text}
-          onChange={(e) => {
-            setText(e.target.value);
-            setCharCount(e.target.value.length);
-          }}
-          onKeyDown={handleKeyDown}
-          placeholder="输入要翻译的文本... Enter 翻译, Shift+Enter 换行"
-          className="flex-1 w-full bg-transparent text-lexi-text placeholder-lexi-text-muted/50 px-4 py-3 resize-none focus:outline-none text-sm leading-relaxed overflow-y-auto"
-          rows={1}
-          maxLength={5000}
-        />
-      </div>
+      {/* Textarea — auto-grow with content */}
+      <textarea
+        ref={textareaRef}
+        value={text}
+        onChange={(e) => {
+          setText(e.target.value);
+          setCharCount(e.target.value.length);
+          // Auto-resize height
+          e.target.style.height = "auto";
+          e.target.style.height = e.target.scrollHeight + "px";
+        }}
+        onKeyDown={handleKeyDown}
+        placeholder="输入要翻译的文本... Enter 翻译, Shift+Enter 换行"
+        className="w-full bg-transparent text-lexi-text placeholder-lexi-text-muted/50 px-4 py-3 resize-none focus:outline-none text-sm leading-relaxed min-h-[250px]"
+        rows={1}
+        maxLength={5000}
+      />
 
       {/* Submit / Stop buttons */}
-      <div className="flex items-center justify-between px-3 py-2 gap-2">
+      <div className="flex items-center justify-between px-3 py-2 gap-2 select-none">
         <div className="text-xs text-lexi-text-muted whitespace-nowrap">
           {translating && "流式输出中..."}
         </div>

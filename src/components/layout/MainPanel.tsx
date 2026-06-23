@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useState, useRef } from "react";
 import InputArea from "../translation/InputArea";
-import OutputArea from "../translation/OutputArea";
+import OutputCard from "../translation/OutputCard";
 import AgentEditor from "../agents/AgentEditor";
 import SettingsDialog from "../settings/SettingsDialog";
 import HistoryPanel from "./HistoryPanel";
-import { useTranslate } from "../../hooks/useTranslate";
+import { useMultiTranslate } from "../../hooks/useMultiTranslate";
 import { useAgentStore } from "../../stores/agentStore";
 import { useConfigStore } from "../../stores/configStore";
 import { useTTS } from "../../hooks/useTTS";
@@ -34,66 +34,63 @@ export default function MainPanel({
   onTargetLangChange,
   onSwapLang,
 }: MainPanelProps) {
-  const { translate, stop, translating, result, error, latency, clear } =
-    useTranslate();
-  const activeAgent = useAgentStore((s) => s.getActiveAgent());
-  const getActiveProvider = useConfigStore((s) => s.getActiveProvider);
+  const {
+    cards,
+    translateAll,
+    stopAll,
+    stopOne,
+    clear,
+    anyTranslating,
+  } = useMultiTranslate();
   const getActiveAgent = useAgentStore((s) => s.getActiveAgent);
   const tts = useTTS();
 
+  // Copy state per card
+  const [copyState, setCopyState] = useState<Record<string, "idle" | "copied">>({});
+  const handleCopy = useCallback(async (providerId: string, text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopyState((prev) => ({ ...prev, [providerId]: "copied" }));
+      setTimeout(() => {
+        setCopyState((prev) => ({ ...prev, [providerId]: "idle" }));
+      }, 1500);
+    } catch {
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand("copy");
+      document.body.removeChild(ta);
+    }
+  }, []);
+
+  const activeAgent = getActiveAgent();
+
   // Auto-read result when translation completes
-  const prevTranslating = useRef(translating);
+  const prevTranslating = useRef(anyTranslating);
   useEffect(() => {
-    if (prevTranslating.current && !translating && result) {
-      const s = useConfigStore.getState().settings;
-      if (s.ttsAutoRead) {
-        tts.speak(result.replace(/<[^>]*>/g, ""), "");
+    if (prevTranslating.current && !anyTranslating) {
+      const firstCard = cards.find((c) => c.result);
+      if (firstCard?.result) {
+        const s = useConfigStore.getState().settings;
+        if (s.ttsAutoRead) {
+          tts.speak(firstCard.result.replace(/<[^>]*>/g, ""), "");
+        }
       }
     }
-    prevTranslating.current = translating;
-  }, [translating, result, tts]);
+    prevTranslating.current = anyTranslating;
+  }, [anyTranslating, cards, tts]);
 
   const handleTranslate = useCallback(
     (text: string) => {
       const agent = getActiveAgent();
-      const provider = getActiveProvider();
-      if (!agent || !provider) return;
-      translate(text, agent, provider, sourceLang, targetLang);
+      if (!agent) return;
+      const providers = useConfigStore.getState().providers;
+      if (providers.length === 0) return;
+      translateAll(text, agent, providers, sourceLang, targetLang);
     },
-    [getActiveAgent, getActiveProvider, translate, sourceLang, targetLang]
+    [getActiveAgent, translateAll, sourceLang, targetLang]
   );
-
-  // Resizable split
-  const [splitRatio, setSplitRatio] = useState(0.5);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const draggingRef = useRef(false);
-
-  useEffect(() => {
-    const onMouseMove = (e: MouseEvent) => {
-      if (!draggingRef.current || !containerRef.current) return;
-      const rect = containerRef.current.getBoundingClientRect();
-      const offsetY = e.clientY - rect.top;
-      const ratio = Math.min(Math.max(offsetY / rect.height, 0.2), 0.8);
-      setSplitRatio(ratio);
-    };
-    const onMouseUp = () => {
-      draggingRef.current = false;
-      document.body.style.cursor = "";
-      document.body.style.userSelect = "";
-    };
-    document.addEventListener("mousemove", onMouseMove);
-    document.addEventListener("mouseup", onMouseUp);
-    return () => {
-      document.removeEventListener("mousemove", onMouseMove);
-      document.removeEventListener("mouseup", onMouseUp);
-    };
-  }, []);
-
-  const handleBarDown = () => {
-    draggingRef.current = true;
-    document.body.style.cursor = "row-resize";
-    document.body.style.userSelect = "none";
-  };
 
   return (
     <div className="flex flex-col h-full bg-lexi-bg">
@@ -110,8 +107,9 @@ export default function MainPanel({
       )}
 
       {view === "translation" && (
-        <>
-          <div className="flex items-center gap-3 px-5 py-4 border-b border-lexi-border/50">
+        <div className="flex flex-col h-full min-h-0 overflow-y-auto">
+          {/* Agent header */}
+          <div className="flex items-center gap-3 px-5 py-4 border-b border-lexi-border/50 flex-shrink-0">
             {activeAgent && (
               <>
                 <span className="text-2xl">{activeAgent.icon}</span>
@@ -127,38 +125,33 @@ export default function MainPanel({
             )}
           </div>
 
-          <div ref={containerRef} className="flex-1 flex flex-col p-5 min-h-0">
-            <div style={{ flexGrow: splitRatio, minHeight: 0 }}>
-              <InputArea
-                onTranslate={handleTranslate}
-                onStop={stop}
-                translating={translating}
-                onClear={clear}
-                sourceLang={sourceLang}
-                targetLang={targetLang}
-                onSourceLangChange={onSourceLangChange}
-                onTargetLangChange={onTargetLangChange}
-                onSwapLang={onSwapLang}
-              />
-            </div>
+          
 
-            <div
-              className="flex items-center justify-center h-2 cursor-row-resize flex-shrink-0 group -my-0.5"
-              onMouseDown={handleBarDown}
-            >
-              <div className="w-8 h-0.5 rounded-full bg-lexi-border/30 group-hover:bg-lexi-accent/60 transition-colors" />
-            </div>
-
-            <div style={{ flexGrow: 1 - splitRatio, minHeight: 0 }}>
-              <OutputArea
-                result={result}
-                error={error}
-                translating={translating}
-                latency={latency}
+          {/* Cards */}
+          <div className="flex flex-col gap-3 px-5 py-5">
+            {/* Input */}
+            <InputArea
+              onTranslate={handleTranslate}
+              onStop={stopAll}
+              translating={anyTranslating}
+              onClear={clear}
+              sourceLang={sourceLang}
+              targetLang={targetLang}
+              onSourceLangChange={onSourceLangChange}
+              onTargetLangChange={onTargetLangChange}
+              onSwapLang={onSwapLang}
+            />
+            {cards.map((card) => (
+              <OutputCard
+                key={card.providerId}
+                card={card}
+                onStop={stopOne}
+                copyState={copyState}
+                onCopy={handleCopy}
               />
-            </div>
+            ))}
           </div>
-        </>
+        </div>
       )}
     </div>
   );
