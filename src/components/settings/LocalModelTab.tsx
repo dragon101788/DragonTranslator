@@ -9,6 +9,8 @@ interface LocalModelStatus {
   llamafile: string;
 }
 
+const isTauri = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
+
 export default function LocalModelTab() {
   const settings = useConfigStore((s) => s.settings);
   const updateSettings = useConfigStore((s) => s.updateSettings);
@@ -17,6 +19,7 @@ export default function LocalModelTab() {
   const [message, setMessage] = useState("");
 
   const refreshStatus = useCallback(async () => {
+    if (!isTauri) return;
     try {
       const { invoke } = await import("@tauri-apps/api/core");
       const s = await invoke<LocalModelStatus>("get_local_model_status", {
@@ -29,6 +32,7 @@ export default function LocalModelTab() {
   }, [settings.localModel.port]);
 
   useEffect(() => {
+    if (!isTauri) return;
     refreshStatus();
     const interval = setInterval(refreshStatus, 3000);
     return () => clearInterval(interval);
@@ -112,6 +116,31 @@ export default function LocalModelTab() {
   };
 
   const isRunning = status?.running ?? false;
+
+  // Browser mode: simplified view
+  if (!isTauri) {
+    return (
+      <div className="space-y-4">
+        <h3 className="text-base font-semibold text-lexi-text">本地模型</h3>
+        <p className="text-sm text-lexi-text-muted">
+          本地模型仅在桌面应用中可用。
+        </p>
+        <div className="p-4 rounded-xl border bg-lexi-bg border-lexi-border">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-lexi-border/50 text-lexi-text-muted">
+              <Cpu size={20} />
+            </div>
+            <div>
+              <span className="text-sm font-medium text-lexi-text">不可用</span>
+              <p className="text-xs text-lexi-text-muted mt-0.5">
+                请使用桌面版 Tauri 应用
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
