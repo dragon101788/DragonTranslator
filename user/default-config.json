@@ -20,6 +20,7 @@
     "closeToTray": true,
     "ttsRate": 1.0,
     "ttsAutoRead": false,
+    "ttsVoice": {},
     "localModel": {
       "enabled": true,
       "port": 5158,

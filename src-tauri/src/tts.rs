@@ -82,13 +82,25 @@ fn piper_voices_dir() -> String {
 // Lang -> voice mapping
 // ---------------------------------------------------------------------------
 
-fn find_voice(lang: &str) -> Result<(String, u32), String> {
+/// preferred_voice: exact voice name (e.g. "zh_CN-huayan-medium"), takes priority
+fn find_voice(lang: &str, preferred_voice: Option<&str>) -> Result<(String, u32), String> {
     let voices_dir = piper_voices_dir();
-    println!("[TTS] find_voice: lang={} dir={}", lang, voices_dir);
+    let voices = list_available_voices();
 
-    // "auto" or empty -> prefer Chinese (native), fallback to any installed
+    println!("[TTS] find_voice: lang={} preferred={:?} dir={}", lang, preferred_voice, voices_dir);
+
+    // If user picked a specific voice, use it directly
+    if let Some(vname) = preferred_voice {
+        if let Some(v) = voices.iter().find(|v| v.name == vname) {
+            let model_path = format!("{}\\{}.onnx", voices_dir, v.name);
+            println!("[TTS] find_voice: preferred -> {} @ {}Hz", model_path, v.sample_rate);
+            return Ok((model_path, v.sample_rate));
+        }
+        // fall through to lang-based search
+    }
+
+    // "auto" or empty -> look for matching lang in user prefs, fallback zh_CN
     if lang.is_empty() || lang == "auto" {
-        let voices = list_available_voices();
         if voices.is_empty() {
             return Err("No voices installed. Please download a voice model.".to_string());
         }
@@ -227,7 +239,7 @@ fn list_available_voices() -> Vec<VoiceInfo> {
 // ---------------------------------------------------------------------------
 
 #[tauri::command]
-pub fn tts_speak(text: String, lang: String) -> Result<(), String> {
+pub fn tts_speak(text: String, lang: String, voice: Option<String>) -> Result<(), String> {
     println!("[TTS] ========================================");
     println!("[TTS] tts_speak START lang={} text_len={}", lang, text.len());
     let preview: String = text.chars().take(50).collect();
@@ -245,7 +257,7 @@ pub fn tts_speak(text: String, lang: String) -> Result<(), String> {
 
     // 2. Find voice
     println!("[TTS] step2: finding voice for lang={}", lang);
-    let (model_path, sample_rate) = find_voice(&lang)?;
+    let (model_path, sample_rate) = find_voice(&lang, voice.as_deref())?;
 
     let piper_exe = piper_exe_path();
     println!("[TTS] step3: piper_exe={}", piper_exe);
@@ -428,6 +440,68 @@ pub fn tts_open_voices_dir() -> Result<(), String> {
         .spawn()
         .map_err(|e| format!("Cannot open directory: {}", e))?;
     Ok(())
+}
+
+#[tauri::command]
+pub fn tts_download_voice(url: String, filename: String) -> Result<String, String> {
+    let voices_dir = piper_voices_dir();
+    let dest = format!("{}\\{}", voices_dir, filename);
+    let dest_path = std::path::Path::new(&dest);
+
+    // Don't re-download if already exists
+    if dest_path.exists() {
+        return Ok(format!("{} already exists", filename));
+    }
+
+    println!("[TTS] download: {} -> {}", url, dest);
+
+    let resp = ureq::get(&url)
+        .call()
+        .map_err(|e| format!("Download failed: {}", e))?;
+
+    let len: usize = resp
+        .header("Content-Length")
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(0);
+    println!("[TTS] download: {} bytes", len);
+
+    let mut reader = resp.into_reader();
+    let mut data: Vec<u8> = Vec::with_capacity(len.max(1024));
+    reader
+        .read_to_end(&mut data)
+        .map_err(|e| format!("Read failed: {}", e))?;
+
+    if let Some(parent) = dest_path.parent() {
+        std::fs::create_dir_all(parent).ok();
+    }
+    fs::write(&dest, &data).map_err(|e| format!("Write failed: {}", e))?;
+
+    println!("[TTS] download: saved {} ({} bytes)", filename, data.len());
+    Ok(format!("Downloaded {} ({} MB)", filename, data.len() as f64 / 1_048_576.0))
+}
+
+#[tauri::command]
+pub fn tts_delete_voice(name: String) -> Result<String, String> {
+    let voices_dir = piper_voices_dir();
+    let onnx_path = format!("{}\\{}.onnx", voices_dir, name);
+    let json_path = format!("{}\\{}.onnx.json", voices_dir, name);
+
+    let mut deleted = false;
+    if std::path::Path::new(&onnx_path).exists() {
+        fs::remove_file(&onnx_path).map_err(|e| format!("Cannot delete onnx: {}", e))?;
+        deleted = true;
+    }
+    if std::path::Path::new(&json_path).exists() {
+        fs::remove_file(&json_path).map_err(|e| format!("Cannot delete json: {}", e))?;
+        deleted = true;
+    }
+
+    if deleted {
+        println!("[TTS] deleted voice: {}", name);
+        Ok(format!("Deleted {}", name))
+    } else {
+        Err(format!("Voice not found: {}", name))
+    }
 }
 
 // ---------------------------------------------------------------------------

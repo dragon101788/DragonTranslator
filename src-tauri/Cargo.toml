@@ -27,3 +27,4 @@ tauri-plugin-store = "2"
 tauri-plugin-global-shortcut = "2"
 zip = "2"
 rodio = "0.19"
+ureq = { version = "2", features = ["tls"] }

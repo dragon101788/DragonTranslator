@@ -385,6 +385,8 @@ pub fn run() {
             tts::tts_get_voices,
             tts::tts_get_voices_dir,
             tts::tts_open_voices_dir,
+            tts::tts_download_voice,
+            tts::tts_delete_voice,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")

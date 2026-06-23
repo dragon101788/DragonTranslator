@@ -63,6 +63,7 @@ export interface AppSettings {
   // TTS
   ttsRate: number;
   ttsAutoRead: boolean;
+  ttsVoice: Record<string, string>; // lang -> voice_name override
   // Local model (llamafile)
   localModel: LocalModelConfig;
 }
@@ -129,6 +130,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   closeToTray: true,
   ttsRate: 1.0,
   ttsAutoRead: false,
+  ttsVoice: {},
   localModel: {
     enabled: true,
     port: 5158,

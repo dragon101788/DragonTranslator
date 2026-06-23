@@ -1,4 +1,5 @@
 ﻿import { useCallback, useRef, useState } from "react";
+import { useConfigStore } from "../stores/configStore";
 
 // ---------------------------------------------------------------------------
 // Detect Tauri environment
@@ -48,9 +49,12 @@ export function useTTS() {
           const startTime = performance.now();
           console.log(TAG, "invoking tts_speak...");
           const { invoke } = await import("@tauri-apps/api/core");
+          const voice = useConfigStore.getState().settings.ttsVoice?.[lang || ""] || null;
+          console.log(TAG, `voice override: ${voice || "(auto)"}`);
           await invoke("tts_speak", {
             text: clean,
             lang: lang || "",
+            voice,
           });
           const elapsed = (performance.now() - startTime).toFixed(0);
 
