@@ -182,15 +182,7 @@ pub fn ensure_user_files() -> Result<Vec<String>, String> {
     // ---- Seed config.json (first run only) ----
     let config_json = cfg_dir.join("config.json");
     if !config_json.exists() {
-        let default_config = cfg_dir.join("default-config.json");
-        if default_config.exists() {
-            let raw = std::fs::read_to_string(&default_config)
-                .map_err(|e| format!("读取 default-config.json 失败: {}", e))?;
-            let wrapped = format!("{{\"app\":{}}}", raw);
-            std::fs::write(&config_json, &wrapped)
-                .map_err(|e| format!("写入 config.json 失败: {}", e))?;
-            log.push("config.json (首次创建)".to_string());
-        }
+        seed_config_json(&cfg_dir, &mut log);
     }
 
     Ok(log)
@@ -218,4 +210,45 @@ fn copy_dir_if_missing(
         }
     }
     Ok(())
+}
+
+/// Seed `config.json` from the canonical `default-config.json`.
+fn seed_config_json(cfg_dir: &Path, log: &mut Vec<String>) {
+    let raw = get_seed_json(cfg_dir);
+    let Ok(raw) = raw else {
+        log.push(format!("config.json 种子失败: {}", raw.unwrap_err()));
+        return;
+    };
+
+    let config_json = cfg_dir.join("config.json");
+    let wrapped = if raw.trim_start().starts_with("{\"app\"") {
+        log.push("config.json (从已有 store 格式播种)".to_string());
+        raw
+    } else {
+        log.push("config.json (首次创建)".to_string());
+        format!("{{\"app\":{}}}", raw)
+    };
+
+    if let Err(e) = std::fs::write(&config_json, &wrapped) {
+        log.push(format!("写入 config.json 失败: {}", e));
+    }
+}
+
+/// Read default-config.json from the canonical source.
+fn get_seed_json(cfg_dir: &Path) -> Result<String, String> {
+    #[cfg(debug_assertions)]
+    {
+        let src = user_source_dir().join("default-config.json");
+        if src.exists() {
+            return std::fs::read_to_string(&src)
+                .map_err(|e| format!("读取项目 default-config.json 失败: {}", e));
+        }
+    }
+    let runtime = cfg_dir.join("default-config.json");
+    if runtime.exists() {
+        std::fs::read_to_string(&runtime)
+            .map_err(|e| format!("读取 default-config.json 失败: {}", e))
+    } else {
+        Err("default-config.json 未找到".to_string())
+    }
 }
