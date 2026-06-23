@@ -92,6 +92,11 @@ export interface ApiTestResult {
 }
 
 // ============== Defaults ==============
+// ===== Defaults (single source: user/default-config.json) =====
+// These are minimal placeholders — real defaults come from:
+//   Tauri:  get_default_config() → embedded user/default-config.json
+//   Browser: fetch('/default-config.json') → Vite-served user/default-config.json
+
 export const DEFAULT_AGENTS: TranslationAgent[] = [];
 
 export const DEFAULT_PROVIDER: LLMProvider = {

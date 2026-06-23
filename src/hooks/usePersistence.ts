@@ -178,8 +178,25 @@ async function loadDefaults() {
       console.error("[Persistence] ❌ get_default_config failed:", e);
     }
   }
-  // Browser fallback: use built-in TS defaults (stores already initialized)
-  console.log("[Persistence] 📄 Using built-in defaults");
+  // Browser mode: fetch default-config.json from Vite dev server
+  try {
+    const resp = await fetch("/default-config.json");
+    const raw = await resp.json() as {
+      providers: LLMProvider[];
+      settings: AppSettings;
+      agents: TranslationAgent[];
+    };
+    const data: PersistedData = {
+      ...raw,
+      activeAgentId: raw.agents[0]?.id ?? null,
+      activeProviderId: raw.providers[0]?.id ?? null,
+      records: [],
+    };
+    applySnapshot(data);
+    console.log("[Persistence] ✅ Defaults loaded from /default-config.json");
+  } catch (e) {
+    console.error("[Persistence] ❌ Browser defaults fetch failed:", e);
+  }
 }
 
 async function loadPersisted() {

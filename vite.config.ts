@@ -1,10 +1,39 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
+import fs from "fs";
+import path from "path";
 
-// https://vite.dev/config/
+// Serve user/default-config.json for browser/dev mode fallback
+function defaultConfigPlugin() {
+  const src = path.resolve(__dirname, "user", "default-config.json");
+  return {
+    name: "default-config",
+    configureServer(server: any) {
+      server.middlewares.use("/default-config.json", (_req: any, res: any) => {
+        try {
+          const data = fs.readFileSync(src, "utf-8");
+          res.setHeader("Content-Type", "application/json");
+          res.end(data);
+        } catch {
+          res.statusCode = 404;
+          res.end("{}");
+        }
+      });
+    },
+    // For production build: copy to dist/
+    writeBundle() {
+      const distDir = path.resolve(__dirname, "dist");
+      if (fs.existsSync(src)) {
+        fs.mkdirSync(distDir, { recursive: true });
+        fs.copyFileSync(src, path.join(distDir, "default-config.json"));
+      }
+    },
+  };
+}
+
 export default defineConfig({
-  plugins: [react(), tailwindcss()],
+  plugins: [react(), tailwindcss(), defaultConfigPlugin()],
 
   // Prevent Vite from obscuring Rust errors
   clearScreen: false,
