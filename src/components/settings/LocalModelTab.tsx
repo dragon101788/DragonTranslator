@@ -43,6 +43,49 @@ export default function LocalModelTab() {
         port: settings.localModel.port,
       });
       setMessage(msg);
+
+      // Auto-register local provider in API config
+      const { useConfigStore } = await import("../../stores/configStore");
+      const state = useConfigStore.getState();
+      const existing = state.providers.find((p) => p.id === "local");
+      const localUrl = `http://127.0.0.1:${settings.localModel.port}/v1`;
+      if (existing) {
+        state.updateProvider("local", { baseUrl: localUrl, apiKey: "local" });
+      } else {
+        state.addProvider({
+          id: "local",
+          name: "本地模型 (Qwen3)",
+          baseUrl: localUrl,
+          apiKey: "local",
+          models: [],
+          isDefault: false,
+          createdAt: Date.now(),
+        });
+      }
+      // Set as active provider
+      state.setActiveProvider("local");
+
+      // Auto-fetch model list from local server
+      try {
+        const { LLMAdapter } = await import("../../services/llm/adapter");
+        const adapter = new LLMAdapter({
+          id: "local",
+          name: "本地模型",
+          baseUrl: localUrl,
+          apiKey: "local",
+          models: [],
+          isDefault: false,
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        });
+        const models = await adapter.fetchModels();
+        if (models.length > 0) {
+          state.updateProvider("local", { models });
+        }
+      } catch {
+        // Model list fetch is optional
+      }
+
       await refreshStatus();
     } catch (e: any) {
       setMessage(`❌ ${e}`);
