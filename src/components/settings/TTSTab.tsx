@@ -29,8 +29,8 @@ const AVAILABLE_VOICES: {
   quality: string;
   url_path: string;
 }[] = [
-  { lang: "zh_CN", label: "中文 (女声 huihui)", voice: "huihui", quality: "medium", url_path: "zh/zh_CN/huihui/medium/zh_CN-huihui-medium" },
-  { lang: "zh_CN", label: "中文 (女声 huihui Low)", voice: "huihui", quality: "low", url_path: "zh/zh_CN/huihui/low/zh_CN-huihui-low" },
+  { lang: "zh_CN", label: "中文 (女声 huayan)", voice: "huayan", quality: "medium", url_path: "zh/zh_CN/huayan/medium/zh_CN-huayan-medium" },
+  { lang: "zh_CN", label: "中文 (女声 huayan Low)", voice: "huayan", quality: "low", url_path: "zh/zh_CN/huayan/low/zh_CN-huayan-low" },
   { lang: "en_US", label: "英语 (女声 lessac)", voice: "lessac", quality: "medium", url_path: "en/en_US/lessac/medium/en_US-lessac-medium" },
   { lang: "en_US", label: "英语 (男声 ryan)", voice: "ryan", quality: "medium", url_path: "en/en_US/ryan/medium/en_US-ryan-medium" },
   { lang: "en_US", label: "英语 (女声 amy)", voice: "amy", quality: "medium", url_path: "en/en_US/amy/medium/en_US-amy-medium" },
