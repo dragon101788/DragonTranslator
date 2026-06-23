@@ -148,6 +148,7 @@ export default function MainPanel({
                 onStop={stopOne}
                 copyState={copyState}
                 onCopy={handleCopy}
+                targetLang={targetLang}
               />
             ))}
           </div>
