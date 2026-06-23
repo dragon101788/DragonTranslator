@@ -21,7 +21,7 @@ export async function translate(input: TranslateInput): Promise<TranslateOutput>
 
   const langHint =
     input.sourceLang && input.targetLang
-      ? `\n\n当前翻译方向：${input.sourceLang} → ${input.targetLang}`
+      ? `\n\n[IMPORTANT OVERRIDE] The user selected target language: ${input.targetLang}. You MUST output in this language only. Ignore any default target language mentioned above.`
       : "";
 
   const result = await adapter.chat({
@@ -55,7 +55,7 @@ export async function translateStream(
 
   const langHint =
     input.sourceLang && input.targetLang
-      ? `\n\n当前翻译方向：${input.sourceLang} → ${input.targetLang}`
+      ? `\n\n[IMPORTANT OVERRIDE] The user selected target language: ${input.targetLang}. You MUST output in this language only. Ignore any default target language mentioned above.`
       : "";
 
   let fullContent = "";
