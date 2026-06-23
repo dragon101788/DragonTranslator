@@ -1,15 +1,5 @@
 {
-  "providers": [
-    {
-      "id": "default",
-      "name": "DeepSeek",
-      "baseUrl": "https://api.deepseek.com",
-      "apiKey": "sk-917a35855fc642e897ecce82b28e956d",
-      "models": [],
-      "isDefault": true,
-      "createdAt": 0
-    }
-  ],
+  "providers": [],
   "settings": {
     "shortcutModifiers": ["Ctrl", "Alt"],
     "shortcutKey": "X",

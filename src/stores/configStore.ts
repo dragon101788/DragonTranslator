@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import type { LLMProvider, AppSettings, WebDAVConfig } from "../types";
-import { DEFAULT_PROVIDER, DEFAULT_SETTINGS } from "../types";
+import { DEFAULT_SETTINGS } from "../types";
 
 interface ConfigStore {
   providers: LLMProvider[];
@@ -33,8 +33,8 @@ interface ConfigStore {
 }
 
 export const useConfigStore = create<ConfigStore>((set, get) => ({
-  providers: [DEFAULT_PROVIDER],
-  activeProviderId: DEFAULT_PROVIDER.id,
+  providers: [],
+  activeProviderId: null,
   settings: { ...DEFAULT_SETTINGS },
 
   setProviders: (providers) => set({ providers }),
