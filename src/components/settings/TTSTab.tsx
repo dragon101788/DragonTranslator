@@ -34,11 +34,9 @@ const AVAILABLE_VOICES: {
   { lang: "en_US", label: "英语 (女声 lessac)", voice: "lessac", quality: "medium", url_path: "en/en_US/lessac/medium/en_US-lessac-medium" },
   { lang: "en_US", label: "英语 (男声 ryan)", voice: "ryan", quality: "medium", url_path: "en/en_US/ryan/medium/en_US-ryan-medium" },
   { lang: "en_US", label: "英语 (女声 amy)", voice: "amy", quality: "medium", url_path: "en/en_US/amy/medium/en_US-amy-medium" },
-  { lang: "ja_JP", label: "日語", voice: "japanes", quality: "medium", url_path: "ja/ja_JP/japanes/medium/ja_JP-japanes-medium" },
-  { lang: "ko_KR", label: "한국어", voice: "korean", quality: "medium", url_path: "ko/ko_KR/korean/medium/ko_KR-korean-medium" },
-  { lang: "fr_FR", label: "Français", voice: "french", quality: "medium", url_path: "fr/fr_FR/french/medium/fr_FR-french-medium" },
-  { lang: "de_DE", label: "Deutsch", voice: "german", quality: "medium", url_path: "de/de_DE/german/medium/de_DE-german-medium" },
-  { lang: "es_ES", label: "Español", voice: "spanish", quality: "medium", url_path: "es/es_ES/spanish/medium/es_ES-spanish-medium" },
+  { lang: "fr_FR", label: "Français (gilles)", voice: "gilles", quality: "low", url_path: "fr/fr_FR/gilles/low/fr_FR-gilles-low" },
+  { lang: "de_DE", label: "Deutsch (thorsten)", voice: "thorsten", quality: "medium", url_path: "de/de_DE/thorsten/medium/de_DE-thorsten-medium" },
+  { lang: "es_ES", label: "Español (carlfm)", voice: "carlfm", quality: "x_low", url_path: "es/es_ES/carlfm/x_low/es_ES-carlfm-x_low" },
 ];
 
 const BASE_URLS = [
@@ -48,7 +46,7 @@ const BASE_URLS = [
 
 // Map our app lang codes to Piper lang codes
 const LANG_TO_PIPER: Record<string, string> = {
-  zh: "zh_CN", en: "en_US", ja: "ja_JP", ko: "ko_KR",
+  zh: "zh_CN", en: "en_US",
   fr: "fr_FR", de: "de_DE", es: "es_ES", ru: "ru_RU",
   pt: "pt_BR", ar: "ar_SA", th: "th_TH", vi: "vi_VN",
 };
