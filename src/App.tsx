@@ -26,6 +26,7 @@ function App() {
         const { invoke } = await import("@tauri-apps/api/core");
         const msg = await invoke<string>("start_local_model", {
           port: localModel.port,
+          model: localModel.model,
         });
         console.log("[LocalModel]", msg);
 

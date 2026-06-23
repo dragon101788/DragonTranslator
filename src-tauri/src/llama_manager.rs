@@ -76,10 +76,10 @@ fn log(msg: &str) {
 // ---------------------------------------------------------------------------
 
 #[tauri::command]
-pub fn start_local_model(port: Option<u16>) -> Result<String, String> {
+pub fn start_local_model(port: Option<u16>, model: Option<String>) -> Result<String, String> {
     let port = port.unwrap_or(DEFAULT_PORT);
 
-    log(&format!("start_local_model 被调用, port={}", port));
+    log(&format!("start_local_model 被调用, port={}, model={:?}", port, model));
 
     // Check if already running
     if is_port_open(port) {
@@ -88,7 +88,7 @@ pub fn start_local_model(port: Option<u16>) -> Result<String, String> {
     }
 
     let exe = llamafile_path();
-    let model = model_path();
+    let model = model.unwrap_or_else(|| model_path());
 
     log(&format!("llamafile 路径: {}", exe));
     log(&format!("模型路径: {}", model));

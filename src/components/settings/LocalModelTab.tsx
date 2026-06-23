@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { Cpu, Play, Square, CheckCircle, XCircle, Loader2 } from "lucide-react";
+import { Cpu, Play, Square, CheckCircle, XCircle, Loader2, FolderOpen, RotateCw } from "lucide-react";
 import { useConfigStore } from "../../stores/configStore";
 
 interface LocalModelStatus {
@@ -34,13 +34,15 @@ export default function LocalModelTab() {
     return () => clearInterval(interval);
   }, [refreshStatus]);
 
-  const handleStart = async () => {
+  const handleStart = async (modelToUse?: string) => {
     setLoading(true);
     setMessage("");
     try {
       const { invoke } = await import("@tauri-apps/api/core");
+      const model = modelToUse || settings.localModel.model;
       const msg = await invoke<string>("start_local_model", {
         port: settings.localModel.port,
+        model,
       });
       setMessage(msg);
 
@@ -215,6 +217,72 @@ export default function LocalModelTab() {
           {message}
         </div>
       )}
+
+      {/* Model path */}
+      <div>
+        <label className="block text-xs text-lexi-text-muted mb-1">
+          GGUF 模型路径
+        </label>
+        <div className="flex items-center gap-2">
+          <input
+            type="text"
+            value={settings.localModel.model}
+            onChange={(e) =>
+              updateSettings({
+                localModel: { ...settings.localModel, model: e.target.value },
+              })
+            }
+            placeholder="qwen3-0.6b-q4_k_m.gguf"
+            className="flex-1 bg-lexi-input border border-lexi-border rounded-lg px-3 py-2 text-sm text-lexi-text placeholder-lexi-text-muted/40 focus:outline-none focus:ring-1 focus:ring-lexi-accent font-mono"
+          />
+          <button
+            onClick={async () => {
+              try {
+                const { invoke } = await import("@tauri-apps/api/core");
+                await invoke("open_user_dir");
+              } catch {}
+            }}
+            className="p-2 rounded-lg bg-lexi-input border border-lexi-border text-lexi-text-muted hover:text-lexi-text hover:bg-lexi-hover transition-colors flex-shrink-0"
+            title="打开模型目录"
+          >
+            <FolderOpen size={15} />
+          </button>
+        </div>
+        <div className="flex items-center justify-between mt-1.5">
+          <p className="text-xs text-lexi-text-muted">
+            路径相对于 ~/Dragon/Translator/，也支持绝对路径
+          </p>
+          {isRunning && (
+            <button
+              onClick={async () => {
+                const model = settings.localModel.model;
+                if (!model.endsWith(".gguf")) {
+                  setMessage("❌ 模型文件必须以 .gguf 结尾");
+                  return;
+                }
+                setMessage("⏳ 验证并重启中...");
+                try {
+                  const { invoke } = await import("@tauri-apps/api/core");
+                  await invoke("stop_local_model");
+                  await new Promise((r) => setTimeout(r, 1000));
+                  const msg = await invoke<string>("start_local_model", {
+                    port: settings.localModel.port,
+                    model,
+                  });
+                  setMessage(msg);
+                  await refreshStatus();
+                } catch (e: any) {
+                  setMessage(`❌ ${e}`);
+                }
+              }}
+              className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs text-lexi-accent-hover hover:bg-lexi-accent/10 transition-colors"
+            >
+              <RotateCw size={12} />
+              <span>验证并重启</span>
+            </button>
+          )}
+        </div>
+      </div>
 
       {/* Port config */}
       <div>
