@@ -51,23 +51,12 @@ struct VoiceAudio {
 // Path resolution
 // ---------------------------------------------------------------------------
 
-#[cfg(not(debug_assertions))]
-fn runtime_dir() -> String {
+fn user_files_dir() -> String {
+    // Always use ~/Dragon/Translator/ (ensure_user_files copies from source tree at startup)
     let home = std::env::var("USERPROFILE")
         .or_else(|_| std::env::var("HOME"))
         .unwrap_or_else(|_| ".".to_string());
     format!("{}\\Dragon\\Translator", home.trim_end_matches('\\'))
-}
-
-#[cfg(debug_assertions)]
-fn user_files_dir() -> String {
-    let manifest = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    manifest.join("..").join("user").to_string_lossy().to_string()
-}
-
-#[cfg(not(debug_assertions))]
-fn user_files_dir() -> String {
-    runtime_dir()
 }
 
 fn piper_exe_path() -> String {

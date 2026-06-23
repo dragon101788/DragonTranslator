@@ -24,19 +24,8 @@ fn runtime_dir() -> String {
     format!("{}\\Dragon\\Translator", home.trim_end_matches('\\'))
 }
 
-/// In debug mode, user/ files live in the project source tree.
-#[cfg(debug_assertions)]
 fn user_files_dir() -> String {
-    let manifest = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    manifest
-        .join("..")
-        .join("user")
-        .to_string_lossy()
-        .to_string()
-}
-
-#[cfg(not(debug_assertions))]
-fn user_files_dir() -> String {
+    // Always use ~/Dragon/Translator/ (ensure_user_files copies from source tree at startup)
     runtime_dir()
 }
 
