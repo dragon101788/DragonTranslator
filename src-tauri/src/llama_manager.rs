@@ -1,6 +1,7 @@
 use std::fs::OpenOptions;
 use std::io::Write;
 use std::net::TcpStream;
+use std::os::windows::process::CommandExt;
 use std::process::{Child, Command, Stdio};
 use std::sync::Mutex;
 use std::time::Duration;
@@ -126,6 +127,7 @@ pub fn start_local_model(port: Option<u16>) -> Result<String, String> {
         .args(&args)
         .stdout(Stdio::null())
         .stderr(err_log.map(|f| f.into()).unwrap_or(Stdio::null()))
+        .creation_flags(0x08000000) // CREATE_NO_WINDOW
         .spawn()
         .map_err(|e| {
             let msg = format!("启动 llamafile 失败: {}", e);
