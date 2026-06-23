@@ -1,6 +1,7 @@
 mod user_files;
 mod llama_manager;
 mod tts;
+mod logger;
 
 use std::sync::Mutex;
 use tauri::Manager;
@@ -203,6 +204,12 @@ fn ensure_user_files() -> Result<Vec<String>, String> {
     user_files::ensure_user_files()
 }
 
+/// Append a line to ~/Dragon/Translator/logs/frontend.log
+#[tauri::command]
+fn log_frontend(level: String, message: String) {
+    logger::write_raw("frontend", &format!("[{}] {}", level, message));
+}
+
 /// Open the config directory ~/Dragon/Translator/ in File Explorer.
 #[tauri::command]
 fn open_user_dir() -> Result<(), String> {
@@ -318,6 +325,9 @@ pub fn run() {
                 Err(e) => eprintln!("[UserFiles] 错误: {}", e),
             }
 
+            // Initialize log directory
+            logger::init_logs(&logger::log_dir());
+
             // ---- System tray ----
             let show_item = MenuItemBuilder::with_id("show", "显示窗口").build(app)?;
             let quit_item = MenuItemBuilder::with_id("quit", "退出").build(app)?;
@@ -387,6 +397,7 @@ pub fn run() {
             tts::tts_open_voices_dir,
             tts::tts_download_voice,
             tts::tts_delete_voice,
+            log_frontend,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")

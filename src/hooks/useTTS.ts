@@ -1,5 +1,6 @@
 ﻿import { useCallback, useRef, useState } from "react";
 import { useConfigStore } from "../stores/configStore";
+import { logger } from "../services/logger";
 
 // ---------------------------------------------------------------------------
 // Detect Tauri environment
@@ -65,11 +66,12 @@ export function useTTS() {
           speakingRef.current = false;
           const msg = typeof e === "string" ? e : e?.message || String(e);
           console.error(TAG, "tts_speak FAILED:", msg);
-          console.error(TAG, "full error:", e);
+          logger.error(`tts_speak failed (lang=${lang}): ${msg}`);
           setState({ isSpeaking: false, error: msg });
 
           // Fallback to Web Speech API on error
           console.warn(TAG, "falling back to Web Speech API...");
+          logger.warn(`falling back to Web Speech API for lang=${lang}`);
           tryWebSpeech(clean, lang, speakingRef, setState);
         }
       } else {

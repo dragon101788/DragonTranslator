@@ -34,7 +34,9 @@ fn llamafile_path() -> String {
 }
 
 fn log_file() -> String {
-    format!("{}\\llama.log", runtime_dir())
+    let dir = format!("{}\\logs", runtime_dir());
+    let _ = std::fs::create_dir_all(&dir);
+    format!("{}\\llama.log", dir)
 }
 
 // ---------------------------------------------------------------------------
