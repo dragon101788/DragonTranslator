@@ -44,10 +44,6 @@ fn llamafile_path() -> String {
     format!("{}\\{}", user_files_dir(), LLAMAFILE_EXE)
 }
 
-fn model_path() -> String {
-    format!("{}\\{}", user_files_dir(), DEFAULT_MODEL)
-}
-
 fn log_file() -> String {
     format!("{}\\llama.log", runtime_dir())
 }
@@ -88,7 +84,12 @@ pub fn start_local_model(port: Option<u16>, model: Option<String>) -> Result<Str
     }
 
     let exe = llamafile_path();
-    let model = model.unwrap_or_else(|| model_path());
+    let model_name = model.unwrap_or_else(|| DEFAULT_MODEL.to_string());
+    let model = if std::path::Path::new(&model_name).is_absolute() {
+        model_name
+    } else {
+        format!("{}\\{}", user_files_dir(), model_name)
+    };
 
     log(&format!("llamafile 路径: {}", exe));
     log(&format!("模型路径: {}", model));

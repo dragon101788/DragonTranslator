@@ -1,5 +1,6 @@
 mod user_files;
 mod llama_manager;
+mod tts;
 
 use std::sync::Mutex;
 use tauri::Manager;
@@ -379,6 +380,11 @@ pub fn run() {
             llama_manager::start_local_model,
             llama_manager::stop_local_model,
             llama_manager::get_local_model_status,
+            tts::tts_speak,
+            tts::tts_stop,
+            tts::tts_get_voices,
+            tts::tts_get_voices_dir,
+            tts::tts_open_voices_dir,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")

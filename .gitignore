@@ -36,6 +36,8 @@ dragon-translator-config.json
 # Large user/ runtime files (distributed via ZIP append, not git)
 user/*.exe
 user/*.gguf
+user/piper/
+user/piper-voices/
 
 # Reference binaries
 llamafile/

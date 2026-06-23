@@ -3,6 +3,7 @@ import { Download, Upload, Globe, Keyboard, Palette, Database, Volume2, FolderOp
 import ApiConfig from "./ApiConfig";
 import ShortcutTab from "./ShortcutTab";
 import LocalModelTab from "./LocalModelTab";
+import TTSTab from "./TTSTab";
 import { useConfigStore } from "../../stores/configStore";
 import { useAgentStore } from "../../stores/agentStore";
 import { useHistoryStore } from "../../stores/historyStore";
@@ -366,64 +367,7 @@ export default function SettingsDialog({ onClose }: SettingsDialogProps) {
               </div>
             )}
 
-            {tab === "tts" && (
-              <div className="space-y-4">
-                <h3 className="text-base font-semibold text-lexi-text">
-                  语音朗读
-                </h3>
-                <p className="text-sm text-lexi-text-muted">
-                  朗读翻译原文和译文。使用操作系统内置语音引擎，离线可用。
-                </p>
-
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-xs text-lexi-text-muted mb-1">
-                      语速 ({settings.ttsRate.toFixed(1)}x)
-                    </label>
-                    <div className="flex items-center gap-3">
-                      <span className="text-xs text-lexi-text-muted">慢</span>
-                      <input
-                        type="range"
-                        min="0.3"
-                        max="2.0"
-                        step="0.1"
-                        value={settings.ttsRate}
-                        onChange={(e) =>
-                          updateSettings({ ttsRate: parseFloat(e.target.value) })
-                        }
-                        className="flex-1 accent-lexi-accent cursor-pointer"
-                      />
-                      <span className="text-xs text-lexi-text-muted">快</span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <span className="text-sm text-lexi-text">自动朗读译文</span>
-                      <p className="text-xs text-lexi-text-muted mt-0.5">
-                        翻译完成后自动朗读译文
-                      </p>
-                    </div>
-                    <button
-                      onClick={() =>
-                        updateSettings({ ttsAutoRead: !settings.ttsAutoRead })
-                      }
-                      className={`relative w-10 h-5 rounded-full transition-colors ${
-                        settings.ttsAutoRead
-                          ? "bg-lexi-accent"
-                          : "bg-lexi-border"
-                      }`}
-                    >
-                      <span
-                        className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform ${
-                          settings.ttsAutoRead ? "left-5" : "left-0.5"
-                        }`}
-                      />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
+            {tab === "tts" && <TTSTab />}
           </div>
         </div>
 
