@@ -29,7 +29,12 @@
     "fontSize": 14,
     "closeToTray": true,
     "ttsRate": 1.0,
-    "ttsAutoRead": false
+    "ttsAutoRead": false,
+    "localModel": {
+      "enabled": false,
+      "port": 5158,
+      "model": "qwen3-0.6b-q4_k_m.gguf"
+    }
   },
   "agents": [
     {

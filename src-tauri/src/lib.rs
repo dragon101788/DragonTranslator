@@ -1,4 +1,5 @@
 mod user_files;
+mod llama_manager;
 
 use std::sync::Mutex;
 use tauri::Manager;
@@ -260,6 +261,7 @@ fn configure_shortcut(
 pub fn run() {
     // Prevent multiple instances — exit early if another instance is running
     if cfg!(windows) && !ensure_single_instance() {
+        let _ = llama_manager::stop_local_model();
         return;
     }
 
@@ -335,6 +337,7 @@ pub fn run() {
                         }
                     }
                     "quit" => {
+                        let _ = llama_manager::stop_local_model();
                         app.exit(0);
                     }
                     _ => {}
@@ -373,7 +376,15 @@ pub fn run() {
             open_user_dir,
             get_default_config,
             ensure_user_files,
+            llama_manager::start_local_model,
+            llama_manager::stop_local_model,
+            llama_manager::get_local_model_status,
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .build(tauri::generate_context!())
+        .expect("error while building tauri application")
+        .run(|_app, event| {
+            if let tauri::RunEvent::Exit = event {
+                let _ = llama_manager::stop_local_model();
+            }
+        });
 }

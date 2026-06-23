@@ -16,6 +16,23 @@ function isTauri() {
 function App() {
   usePersistence();
 
+  // ---- Auto-start local model (llamafile) if enabled ----
+  useEffect(() => {
+    if (!isTauri()) return;
+    // Delay to allow persistence to load settings
+    const timer = setTimeout(() => {
+      const { localModel } = useConfigStore.getState().settings;
+      if (localModel.enabled) {
+        import("@tauri-apps/api/core").then(({ invoke }) => {
+          invoke<string>("start_local_model", { port: localModel.port })
+            .then((msg) => console.log("[LocalModel]", msg))
+            .catch(console.error);
+        });
+      }
+    }, 1500);
+    return () => clearTimeout(timer);
+  }, []);
+
   // ---- Sync theme & font-size to <html> ----
   useEffect(() => {
     const unsub = useConfigStore.subscribe((s) => {

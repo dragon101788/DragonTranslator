@@ -63,6 +63,14 @@ export interface AppSettings {
   // TTS
   ttsRate: number;
   ttsAutoRead: boolean;
+  // Local model (llamafile)
+  localModel: LocalModelConfig;
+}
+
+export interface LocalModelConfig {
+  enabled: boolean;      // auto-start on launch
+  port: number;          // llama.cpp API port
+  model: string;         // GGUF filename
 }
 
 export interface WebDAVConfig {
@@ -116,4 +124,9 @@ export const DEFAULT_SETTINGS: AppSettings = {
   closeToTray: true,
   ttsRate: 1.0,
   ttsAutoRead: false,
+  localModel: {
+    enabled: false,
+    port: 5158,
+    model: "qwen3-0.6b-q4_k_m.gguf",
+  },
 };

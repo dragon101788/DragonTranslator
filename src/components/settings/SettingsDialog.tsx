@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
-import { Download, Upload, Globe, Keyboard, Palette, Database, Volume2, FolderOpen } from "lucide-react";
+import { Download, Upload, Globe, Keyboard, Palette, Database, Volume2, FolderOpen, Cpu } from "lucide-react";
 import ApiConfig from "./ApiConfig";
 import ShortcutTab from "./ShortcutTab";
+import LocalModelTab from "./LocalModelTab";
 import { useConfigStore } from "../../stores/configStore";
 import { useAgentStore } from "../../stores/agentStore";
 import { useHistoryStore } from "../../stores/historyStore";
@@ -10,11 +11,12 @@ interface SettingsDialogProps {
   onClose: () => void;
 }
 
-type SettingsTab = "api" | "webdav" | "shortcut" | "appearance" | "tts";
+type SettingsTab = "api" | "webdav" | "localModel" | "shortcut" | "appearance" | "tts";
 
 const TABS: { key: SettingsTab; label: string; icon: React.ReactNode }[] = [
   { key: "api", label: "API 配置", icon: <Globe size={16} /> },
   { key: "webdav", label: "WebDAV 同步", icon: <Database size={16} /> },
+  { key: "localModel", label: "本地模型", icon: <Cpu size={16} /> },
   { key: "shortcut", label: "快捷键", icon: <Keyboard size={16} /> },
   { key: "appearance", label: "外观", icon: <Palette size={16} /> },
   { key: "tts", label: "语音", icon: <Volume2 size={16} /> },
@@ -160,6 +162,8 @@ export default function SettingsDialog({ onClose }: SettingsDialogProps) {
           {/* Content */}
           <div className="flex-1 overflow-y-auto p-5">
             {tab === "api" && <ApiConfig />}
+
+            {tab === "localModel" && <LocalModelTab />}
 
             {tab === "webdav" && (
               <div className="space-y-4">

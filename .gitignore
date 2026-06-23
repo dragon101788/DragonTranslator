@@ -32,3 +32,10 @@ src-tauri/target/
 
 # Local portable data (contains API keys)
 dragon-translator-config.json
+
+# Large user/ runtime files (distributed via ZIP append, not git)
+user/*.exe
+user/*.gguf
+
+# Reference binaries
+llamafile/
