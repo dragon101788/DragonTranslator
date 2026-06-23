@@ -1,15 +1,5 @@
 {
-  "providers": [
-    {
-      "id": "local",
-      "name": "本地模型 (Qwen3)",
-      "baseUrl": "http://127.0.0.1:5158/v1",
-      "apiKey": "local",
-      "models": [],
-      "isDefault": false,
-      "createdAt": 0
-    }
-  ],
+  "providers": [],
   "settings": {
     "shortcutModifiers": ["Ctrl", "Alt"],
     "shortcutKey": "X",

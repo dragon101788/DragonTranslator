@@ -155,48 +155,67 @@ async function persistNow() {
   }
 }
 
+/// Auto-create local provider from settings.localModel if none exists.
+/// Called after loading defaults, so the local provider appears in both
+/// Tauri and browser modes without hardcoding in default-config.json.
+function ensureLocalProvider(rawProviders: LLMProvider[]) {
+  const settings = useConfigStore.getState().settings;
+  const local = rawProviders.find((p) => p.id === "local");
+  const url = `http://127.0.0.1:${settings.localModel.port}/v1`;
+  const name = `本地模型 (${settings.localModel.model.replace(".gguf", "")})`;
+  if (local) {
+    return rawProviders.map((p) =>
+      p.id === "local" ? { ...p, baseUrl: url, name, apiKey: "local" } : p
+    );
+  }
+  return [
+    {
+      id: "local",
+      name,
+      baseUrl: url,
+      apiKey: "local",
+      models: [],
+      isDefault: false,
+      createdAt: Date.now(),
+    },
+    ...rawProviders,
+  ];
+}
+
 async function loadDefaults() {
+  let raw: { providers: LLMProvider[]; settings: AppSettings; agents: TranslationAgent[] } | null = null;
+
   if (isTauriEnv()) {
     try {
       const { invoke } = await import("@tauri-apps/api/core");
       const json = await invoke<string>("get_default_config");
-      const raw = JSON.parse(json) as {
-        providers: LLMProvider[];
-        settings: AppSettings;
-        agents: TranslationAgent[];
-      };
-      const data: PersistedData = {
-        ...raw,
-        activeAgentId: raw.agents[0]?.id ?? null,
-        activeProviderId: raw.providers[0]?.id ?? null,
-        records: [],
-      };
-      applySnapshot(data);
+      raw = JSON.parse(json);
       console.log("[Persistence] ✅ Defaults loaded from embedded config");
-      return;
     } catch (e) {
       console.error("[Persistence] ❌ get_default_config failed:", e);
     }
+  } else {
+    try {
+      const resp = await fetch("/default-config.json");
+      raw = await resp.json();
+      console.log("[Persistence] ✅ Defaults loaded from /default-config.json");
+    } catch (e) {
+      console.error("[Persistence] ❌ Browser defaults fetch failed:", e);
+    }
   }
-  // Browser mode: fetch default-config.json from Vite dev server
-  try {
-    const resp = await fetch("/default-config.json");
-    const raw = await resp.json() as {
-      providers: LLMProvider[];
-      settings: AppSettings;
-      agents: TranslationAgent[];
-    };
-    const data: PersistedData = {
-      ...raw,
-      activeAgentId: raw.agents[0]?.id ?? null,
-      activeProviderId: raw.providers[0]?.id ?? null,
-      records: [],
-    };
-    applySnapshot(data);
-    console.log("[Persistence] ✅ Defaults loaded from /default-config.json");
-  } catch (e) {
-    console.error("[Persistence] ❌ Browser defaults fetch failed:", e);
-  }
+
+  if (!raw) return;
+
+  // Inject local provider from settings (dynamic, not hardcoded)
+  raw.providers = ensureLocalProvider(raw.providers);
+
+  const data: PersistedData = {
+    ...raw,
+    activeAgentId: raw.agents[0]?.id ?? null,
+    activeProviderId: raw.providers[0]?.id ?? null,
+    records: [],
+  };
+  applySnapshot(data);
 }
 
 async function loadPersisted() {
