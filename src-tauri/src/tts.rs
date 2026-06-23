@@ -230,7 +230,8 @@ fn list_available_voices() -> Vec<VoiceInfo> {
 pub fn tts_speak(text: String, lang: String) -> Result<(), String> {
     println!("[TTS] ========================================");
     println!("[TTS] tts_speak START lang={} text_len={}", lang, text.len());
-    println!("[TTS] text preview: {}", &text[..text.len().min(50)]);
+    let preview: String = text.chars().take(50).collect();
+    println!("[TTS] text preview: {}", preview);
 
     if text.trim().is_empty() {
         println!("[TTS] empty text, skipping");
