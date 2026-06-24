@@ -50,20 +50,31 @@ if ($existing) {
 }
 
 # 6. Git: commit version bump + tag + push
-Write-Host "Tagging v$new..."
+Write-Host "Committing..."
 git add $cargo $tauri
+if ($LASTEXITCODE -ne 0) { Write-Host "ERROR: git add failed"; exit 1 }
 git commit -m "chore: bump version to $new"
-git tag -a "v$new" -m "v$new"
+if ($LASTEXITCODE -ne 0) { Write-Host "ERROR: git commit failed (nothing to commit?)"; exit 1 }
+
+Write-Host "Pushing tag v$new..."
 git push origin "v$new"
+if ($LASTEXITCODE -ne 0) { Write-Host "ERROR: git push tag failed"; exit 1 }
+Write-Host "Pushing master..."
 git push origin master
+if ($LASTEXITCODE -ne 0) { Write-Host "ERROR: git push master failed"; exit 1 }
+
+Write-Host "=== Git push OK ==="
 
 # 7. Create GitHub Release (requires gh CLI authenticated)
 $repo = "dragon101788/DragonTranslator"
-try {
-    Write-Host "Creating GitHub Release..."
-    gh release create "v$new" "$zip" --repo $repo --title "v$new" --notes "Release v$new" 2>&1
-    Write-Host ">>> Release v$new published with asset!"
-} catch {
-    Write-Host ">>> Tag v$new pushed. To create Release: open https://github.com/$repo/releases/new"
+Write-Host "Creating GitHub Release..."
+$result = gh release create "v$new" "$zip" --repo $repo --title "v$new" --notes "Release v$new" 2>&1
+if ($LASTEXITCODE -eq 0) {
+    Write-Host "=== Release v$new published ==="
+    Write-Host $result
+} else {
+    Write-Host "WARNING: gh release create failed (not authenticated?)"
+    Write-Host "Tag v$new is pushed. Create Release manually:"
+    Write-Host "  https://github.com/$repo/releases/new?tag=v$new"
     Start-Process "https://github.com/$repo/releases/new?tag=v$new"
 }
