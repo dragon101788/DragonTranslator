@@ -41,7 +41,15 @@ if ($needRebuild) {
     & ".\打包.bat" "silent"
 }
 
-# 5. Git: commit version bump + tag + push
+# 5. Check tag doesn't already exist
+$existing = git tag -l "v$new"
+if ($existing) {
+    Write-Host "ERROR: Tag v$new already exists!"
+    Write-Host "If this was a mistake, delete the tag: git tag -d v$new; git push origin :refs/tags/v$new"
+    exit 1
+}
+
+# 6. Git: commit version bump + tag + push
 Write-Host "Tagging v$new..."
 git add $cargo $tauri
 git commit -m "chore: bump version to $new"
@@ -49,7 +57,7 @@ git tag -a "v$new" -m "v$new"
 git push origin "v$new"
 git push origin master
 
-# 6. Create GitHub Release (requires gh CLI authenticated)
+# 7. Create GitHub Release (requires gh CLI authenticated)
 $repo = "dragon101788/DragonTranslator"
 try {
     Write-Host "Creating GitHub Release..."
