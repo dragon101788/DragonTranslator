@@ -82,16 +82,35 @@ if ($LASTEXITCODE -ne 0) { Write-Host "ERROR: git push master failed"; exit 1 }
 
 Write-Host "=== Git push OK ==="
 
-# 7. Create GitHub Release (requires gh CLI authenticated)
+# 7. Create GitHub Release + upload ZIP (with retry)
 $repo = "dragon101788/DragonTranslator"
-Write-Host "Creating GitHub Release (uploading $([math]::Round((Get-Item $zip).Length/1MB,0))MB, may take a while)..."
-$result = gh release create "v$new" "$zip" --repo $repo --title "v$new" --notes "Release v$new"
-if ($LASTEXITCODE -eq 0) {
-    Write-Host "=== Release v$new published ==="
-    Write-Host $result
-} else {
-    Write-Host "WARNING: gh release create failed (not authenticated?)"
-    Write-Host "Tag v$new is pushed. Create Release manually:"
-    Write-Host "  https://github.com/$repo/releases/new?tag=v$new"
-    Start-Process "https://github.com/$repo/releases/new?tag=v$new"
+$zipSize = [math]::Round((Get-Item $zip).Length / 1MB, 0)
+
+# 7a. Create release (without asset)
+Write-Host "Creating GitHub Release v$new..."
+$out = gh release create "v$new" --repo $repo --title "v$new" --notes "Release v$new" 2>&1
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "ERROR: Failed to create Release"
+    Write-Host $out
+    exit 1
 }
+
+# 7b. Upload ZIP (retry up to 3 times, network drops are common for large files)
+for ($i = 1; $i -le 3; $i++) {
+    Write-Host "Uploading ZIP ($zipSize MB, attempt $i/3)..."
+    gh release upload "v$new" "$zip" --repo $repo --clobber 2>&1
+    if ($LASTEXITCODE -eq 0) {
+        Write-Host "=== Release v$new published with ZIP! ==="
+        Write-Host "  https://github.com/$repo/releases/tag/v$new"
+        exit 0
+    }
+    if ($i -lt 3) {
+        Write-Host "Upload dropped, retrying in 5s..."
+        Start-Sleep 5
+    }
+}
+
+Write-Host "WARNING: ZIP upload failed after 3 attempts (network unstable)"
+Write-Host "Release v$new exists but has no asset. Retry manually:"
+Write-Host "  gh release upload v$new DragonTranslator.zip --repo $repo"
+exit 1
