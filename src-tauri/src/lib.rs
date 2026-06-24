@@ -321,15 +321,35 @@ pub fn run() {
 
             // Initialize log directory
             let logs = paths::logs_dir();
-            let _ = std::fs::create_dir_all(&logs);
+            match std::fs::create_dir_all(&logs) {
+                Ok(()) => {}
+                Err(e) => {
+                    let msg = format!("Cannot create log dir '{}': {}", logs.display(), e);
+                    eprintln!("[Setup] ERROR: {}", msg);
+                }
+            }
             logger::init_logs(&logs.to_string_lossy());
-            logger::log(1, "app", &format!("App started, logs at {}", logs.display()));
+            logger::log(1, "app", &format!("App starting — logs: {}", logs.display()));
 
             // Seed config.json from default-config.json on first run
             let app_root = paths::app_dir();
             let config_path = app_root.join("config.json");
             if !config_path.exists() {
+                logger::log(
+                    1,
+                    "app",
+                    &format!(
+                        "config.json not found at {}, seeding from default-config.json...",
+                        config_path.display()
+                    ),
+                );
                 user_files::seed_config(&app_root);
+            } else {
+                logger::log(
+                    1,
+                    "app",
+                    &format!("config.json found at {}", config_path.display()),
+                );
             }
 
             // ---- System tray ----

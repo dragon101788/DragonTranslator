@@ -5,6 +5,7 @@ import TitleBar from "./components/layout/TitleBar";
 import { usePersistence } from "./hooks/usePersistence";
 import { useConfigStore } from "./stores/configStore";
 import { useAgentStore } from "./stores/agentStore";
+import { logger } from "./services/logger";
 import type { TranslationAgent } from "./types";
 
 type ViewType = "translation" | "agent-editor" | "history" | "settings";
@@ -21,7 +22,13 @@ function App() {
     if (!isTauri()) return;
     const timer = setTimeout(async () => {
       const { localModel } = useConfigStore.getState().settings;
-      if (!localModel.enabled) return;
+      if (!localModel.enabled) {
+        logger.info("本地模型已禁用, 跳过启动");
+        return;
+      }
+      logger.info(
+        `正在启动本地模型: ${localModel.model} (端口 ${localModel.port})...`
+      );
       try {
         const { invoke } = await import("@tauri-apps/api/core");
         const msg = await invoke<string>("start_local_model", {
@@ -29,6 +36,7 @@ function App() {
           model: localModel.model,
         });
         console.log("[LocalModel]", msg);
+        logger.info(`本地模型启动成功: ${msg}`);
 
         // Auto-register local provider
         const localUrl = `http://127.0.0.1:${localModel.port}/v1`;
@@ -69,12 +77,17 @@ function App() {
           const models = await adapter.fetchModels();
           if (models.length > 0) {
             state.updateProvider("local", { models });
+            logger.info(`本地模型列表获取成功: ${models.length} 个模型`);
+          } else {
+            logger.warn("本地模型列表为空");
           }
-        } catch {
-          // optional
+        } catch (e: any) {
+          logger.warn(`本地模型列表获取失败 (不影响使用): ${e?.message || e}`);
         }
-      } catch (e) {
-        console.error("[LocalModel]", e);
+      } catch (e: any) {
+        const errMsg = `本地模型启动失败: ${e?.message || e}`;
+        console.error("[LocalModel]", errMsg);
+        logger.error(errMsg);
       }
     }, 1500);
     return () => clearTimeout(timer);
@@ -100,7 +113,7 @@ function App() {
       invoke("configure_shortcut", {
         modifiers: s.shortcutModifiers,
         key: s.shortcutKey,
-      }).catch(console.error);
+      }).catch((e: any) => logger.error(`快捷键注册失败: ${e?.message || e}`));
     });
   }, []);
 
@@ -113,7 +126,9 @@ function App() {
       const key = state.settings.shortcutKey;
       if (mods !== prev.settings.shortcutModifiers || key !== prev.settings.shortcutKey) {
         import("@tauri-apps/api/core").then(({ invoke }) => {
-          invoke("configure_shortcut", { modifiers: mods, key }).catch(console.error);
+          invoke("configure_shortcut", { modifiers: mods, key }).catch(
+            (e: any) => logger.error(`快捷键更新失败: ${e?.message || e}`)
+          );
         });
       }
     });
@@ -130,8 +145,8 @@ function App() {
           if (models.length > 0) {
             useConfigStore.getState().updateProvider(provider.id, { models });
           }
-        }).catch(() => {
-          // Silently ignore — user can manually fetch in settings
+        }).catch((e: any) => {
+          logger.warn(`默认服务商模型列表获取失败 (${provider.name}): ${e?.message || e}`);
         });
       });
     }

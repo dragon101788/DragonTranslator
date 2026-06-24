@@ -70,15 +70,16 @@ let _storePromise: Promise<Store> | null = null;
 async function getStore(): Promise<Store> {
   if (!_storePromise) {
     _storePromise = (async () => {
-      console.log("[Persistence] getStore: resolving app dir...");
       const { invoke } = await import("@tauri-apps/api/core");
       const base = await invoke<string>("get_app_dir");
       const storePath = `${base}\\${STORE_FILENAME}`;
-      console.log("[Persistence] getStore: path =", storePath);
+      logger.info(`Persistence store path: ${storePath}`);
       const { load } = await import("@tauri-apps/plugin-store");
       return load(storePath, { autoSave: true, defaults: {} });
     })().catch((e) => {
-      console.error("[Persistence] getStore FAILED:", e);
+      const msg = `getStore FAILED: ${e}`;
+      console.error("[Persistence]", msg);
+      logger.error(msg);
       _storePromise = null;
       throw e;
     });
@@ -92,7 +93,9 @@ async function syncLogLevel(level?: string) {
     const lvlMap: Record<string, number> = { debug: 0, info: 1, warn: 2, error: 3 };
     const { invoke } = await import("@tauri-apps/api/core");
     await invoke("set_log_level", { level: lvlMap[level] ?? 1 });
-  } catch {}
+  } catch (e: any) {
+    logger.error(`syncLogLevel failed: ${e?.message || e}`);
+  }
 }
 
 async function loadFromFile(): Promise<boolean> {
@@ -101,9 +104,12 @@ async function loadFromFile(): Promise<boolean> {
   if (data) {
     applySnapshot(data);
     syncLogLevel(data.settings?.logLevel);
-    logger.info("配置从磁盘加载");
+    logger.info(
+      `配置从磁盘加载 (agents=${data.agents?.length ?? 0} providers=${data.providers?.length ?? 0})`
+    );
     return true;
   }
+  logger.info("config.json 存在但无 app 数据, 将加载默认配置");
   return false;
 }
 
@@ -111,7 +117,6 @@ async function saveToFile(data: PersistedData) {
   const store = await getStore();
   await store.set("app", data);
   await store.save();
-  console.log("[Persistence] ✅ Written to disk");
 }
 
 // ---- Browser backend (localStorage) ----
@@ -122,11 +127,11 @@ function loadFromLocalStorage(): boolean {
     if (raw) {
       const data = JSON.parse(raw) as PersistedData;
       applySnapshot(data);
-      console.log("[Persistence] ✅ Loaded from localStorage");
+      logger.info("配置从 localStorage 加载");
       return true;
     }
-  } catch (e) {
-    console.error("[Persistence] ❌ localStorage load failed:", e);
+  } catch (e: any) {
+    logger.error(`localStorage 加载失败: ${e?.message || e}`);
   }
   return false;
 }
@@ -134,9 +139,8 @@ function loadFromLocalStorage(): boolean {
 function saveToLocalStorage(data: PersistedData) {
   try {
     localStorage.setItem(LS_KEY, JSON.stringify(data));
-    console.log("[Persistence] ✅ Written to localStorage");
-  } catch (e) {
-    console.error("[Persistence] ❌ localStorage write failed:", e);
+  } catch (e: any) {
+    logger.error(`localStorage 写入失败: ${e?.message || e}`);
   }
 }
 
@@ -203,17 +207,21 @@ async function loadDefaults() {
       const { invoke } = await import("@tauri-apps/api/core");
       const json = await invoke<string>("get_default_config");
       raw = JSON.parse(json);
-      console.log("[Persistence] ✅ Defaults loaded from embedded config");
-    } catch (e) {
-      console.error("[Persistence] ❌ get_default_config failed:", e);
+      logger.info("默认配置从嵌入文件加载成功");
+    } catch (e: any) {
+      const msg = `get_default_config 失败: ${e?.message || e}`;
+      console.error("[Persistence]", msg);
+      logger.error(msg);
     }
   } else {
     try {
       const resp = await fetch("/default-config.json");
       raw = await resp.json();
-      console.log("[Persistence] ✅ Defaults loaded from /default-config.json");
-    } catch (e) {
-      console.error("[Persistence] ❌ Browser defaults fetch failed:", e);
+      logger.info("默认配置从 /default-config.json 加载成功");
+    } catch (e: any) {
+      const msg = `Browser defaults fetch 失败: ${e?.message || e}`;
+      console.error("[Persistence]", msg);
+      logger.error(msg);
     }
   }
 
@@ -229,7 +237,9 @@ async function loadDefaults() {
     records: [],
   };
   applySnapshot(data);
-  logger.info("默认配置已加载");
+  logger.info(
+    `默认配置已加载 (agents=${raw.agents.length} providers=${raw.providers.length})`
+  );
 }
 
 async function loadPersisted() {
@@ -238,14 +248,24 @@ async function loadPersisted() {
       const loaded = await loadFromFile();
       if (loaded) return;
       // No saved data → load embedded defaults
+      logger.info("无已保存配置, 加载嵌入默认配置...");
       await loadDefaults();
       return;
-    } catch (e) {
-      console.error("[Persistence] ❌ Load from disk failed:", e);
+    } catch (e: any) {
+      const msg = `磁盘加载失败, 回退到默认配置: ${e?.message || e}`;
+      console.error("[Persistence]", msg);
+      logger.error(msg);
+      // FALLBACK: even on error, try to load defaults
+      try {
+        await loadDefaults();
+      } catch (e2: any) {
+        logger.error(`默认配置回退也失败: ${e2?.message || e2}`);
+      }
     }
   } else {
     const loaded = loadFromLocalStorage();
     if (!loaded) {
+      logger.info("浏览器: 无已保存配置, 加载默认配置...");
       await loadDefaults();
     }
   }

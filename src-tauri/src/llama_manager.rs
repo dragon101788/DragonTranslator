@@ -155,11 +155,13 @@ pub fn start_local_model(port: Option<u16>, model: Option<String>) -> Result<Str
         }
     }
 
-    log("超时: 60s 内端口未开放");
-    Ok(format!(
-        "本地模型启动超时 (端口 {}), 请检查 logs/llama.log",
+    let err_msg = format!(
+        "本地模型启动超时 (端口 {}, 60s). 请检查 logs/llama.log",
         port
-    ))
+    );
+    log(&err_msg);
+    stop_process();
+    Err(err_msg)
 }
 
 #[tauri::command]

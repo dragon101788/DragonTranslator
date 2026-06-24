@@ -12,8 +12,9 @@ export async function log(level: LogLevel, message: string) {
     try {
       const { invoke } = await import("@tauri-apps/api/core");
       await invoke("log_frontend", { level, message });
-    } catch {
-      // silent
+    } catch (err) {
+      // Fallback: at minimum show in browser console
+      console.warn("[Logger] backend unavailable, falling back to console:", err);
     }
   }
 }

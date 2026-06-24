@@ -29,7 +29,9 @@ pub fn seed_config(app_dir: &Path) {
     let raw = match get_seed_json(app_dir) {
         Ok(r) => r,
         Err(e) => {
-            eprintln!("[Setup] config seed failed: {}", e);
+            let msg = format!("Config seed failed: {}", e);
+            eprintln!("[Setup] {}", msg);
+            crate::logger::log(3, "app", &msg);
             return;
         }
     };
@@ -42,9 +44,16 @@ pub fn seed_config(app_dir: &Path) {
     };
 
     if let Err(e) = std::fs::write(&config_json, &wrapped) {
-        eprintln!("[Setup] write config.json failed: {}", e);
+        let msg = format!("Write config.json failed: {}", e);
+        eprintln!("[Setup] {}", msg);
+        crate::logger::log(3, "app", &msg);
     } else {
-        println!("[Setup] config.json seeded");
+        let msg = format!(
+            "config.json seeded from default-config.json → {}",
+            config_json.display()
+        );
+        println!("[Setup] {}", msg);
+        crate::logger::log(1, "app", &msg);
     }
 }
 
