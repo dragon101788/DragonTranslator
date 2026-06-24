@@ -35,6 +35,7 @@ mkdir "%PKG_DIR%"
 xcopy "runtime\*" "%PKG_DIR%\" /E /I /Y /Q >nul
 
 :: Copy exe into package
+
 copy /y "%SRC_DIR%\%EXE_FILE%" "%PKG_DIR%\%EXE_FILE%" >nul
 
 :: Create ZIP

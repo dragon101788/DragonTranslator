@@ -84,8 +84,8 @@ Write-Host "=== Git push OK ==="
 
 # 7. Create GitHub Release (requires gh CLI authenticated)
 $repo = "dragon101788/DragonTranslator"
-Write-Host "Creating GitHub Release..."
-$result = gh release create "v$new" "$zip" --repo $repo --title "v$new" --notes "Release v$new" 2>&1
+Write-Host "Creating GitHub Release (uploading $([math]::Round((Get-Item $zip).Length/1MB,0))MB, may take a while)..."
+$result = gh release create "v$new" "$zip" --repo $repo --title "v$new" --notes "Release v$new"
 if ($LASTEXITCODE -eq 0) {
     Write-Host "=== Release v$new published ==="
     Write-Host $result
