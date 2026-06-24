@@ -2,10 +2,11 @@
   "version": "2.0.0",
   "inputs": [
     {
-      "id": "tagVersion",
-      "type": "promptString",
-      "description": "版本号 (如 v0.6.0)",
-      "default": "v0.6.0"
+      "id": "bumpLevel",
+      "type": "pickString",
+      "description": "版本升级类型",
+      "options": ["patch", "minor", "major"],
+      "default": "patch"
     },
   ],
   "tasks": [
@@ -39,10 +40,10 @@
     {
       "label": "🏷️ 发布 Release",
       "type": "shell",
-      "command": "$exe='src-tauri\\target\\release\\龙腾翻译.exe'; $zip='DragonTranslator.zip'; if (-not(Test-Path $zip) -or (Test-Path $exe) -and (Get-Item $exe).LastWriteTime -gt (Get-Item $zip).LastWriteTime) { Write-Output '>>> ZIP 过期或缺失, 重新打包...'; & '.\\打包.bat' 'silent' }; Write-Output '>>> 打 Tag...'; git tag -a ${input:tagVersion} -m '${input:tagVersion}'; git push origin ${input:tagVersion}; Write-Output '>>> Release Tag 已推送'",
+      "command": "$bump='${input:bumpLevel}'; $cargo='src-tauri\\Cargo.toml'; $tauri='src-tauri\\tauri.conf.json'; $cur=(Select-String -Path $cargo -Pattern '^version\\s*=\\s*\"(.*)\"').Matches.Groups[1].Value; Write-Output \">>> 当前版本: $cur\"; $v=$cur -split '\\.'; if($bump -eq 'major'){ $v[0]=[int]$v[0]+1; $v[1]=0; $v[2]=0 } elseif($bump -eq 'minor'){ $v[1]=[int]$v[1]+1; $v[2]=0 } else{ $v[2]=[int]$v[2]+1 }; $new=\"$($v[0]).$($v[1]).$($v[2])\"; Write-Output \">>> 新版本: $new\"; (Get-Content $cargo -Raw) -replace 'version\\s*=\\s*\"[^\"]*\"', \"version = `\"$new`\"\" | Set-Content $cargo -NoNewline; (Get-Content $tauri -Raw) -replace '\"version\"\\s*:\\s*\"[^\"]*\"', \"`\"version`\": `\"$new`\"\" | Set-Content $tauri -NoNewline; Write-Output '>>> 版本已更新'; $exe='src-tauri\\target\\release\\龙腾翻译.exe'; $zip='DragonTranslator.zip'; if (-not(Test-Path $zip) -or (Test-Path $exe) -and (Get-Item $exe).LastWriteTime -gt (Get-Item $zip).LastWriteTime) { Write-Output '>>> ZIP 过期, 重新打包...'; & '.\\打包.bat' 'silent' }; Write-Output '>>> 打 Tag v$new...'; git add $cargo $tauri; git commit -m \"chore: bump version to $new\"; git tag -a \"v$new\" -m \"v$new\"; git push origin \"v$new\"; git push origin master; Write-Output \">>> Release v$new 已推送\"",
       "options": { "cwd": "${workspaceFolder}" },
       "problemMatcher": [],
-      "detail": "检测 ZIP 是否最新 → 如需要则重新打包 → 打 Tag → push"
+      "detail": "自动升版本号 → 检测 ZIP → 打包 → Tag → push"
     },
     },
     {
