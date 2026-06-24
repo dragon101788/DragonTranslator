@@ -7,12 +7,6 @@
       "description": "版本号 (如 v0.6.0)",
       "default": "v0.6.0"
     },
-    {
-      "id": "commitMessage",
-      "type": "promptString",
-      "description": "Commit 信息",
-      "default": "update"
-    }
   ],
   "tasks": [
     {
@@ -35,12 +29,12 @@
       "detail": "编译 + 打包 runtime 目录为 DragonTranslator.zip"
     },
     {
-      "label": "⬆️ 提交至 GitHub",
+      "label": "⬆️ 推送至 GitHub",
       "type": "shell",
-      "command": "git add -A; git commit -m '${input:commitMessage}'; git push origin master",
+      "command": "git push origin master",
       "options": { "cwd": "${workspaceFolder}" },
       "problemMatcher": [],
-      "detail": "stage 所有变更 → commit → push"
+      "detail": "推送本地 commit 到 GitHub"
     },
     {
       "label": "🏷️ 发布 Release",
