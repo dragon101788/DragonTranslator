@@ -8,6 +8,7 @@ import { useMultiTranslate } from "../../hooks/useMultiTranslate";
 import { useAgentStore } from "../../stores/agentStore";
 import { useConfigStore } from "../../stores/configStore";
 import { useTTS } from "../../hooks/useTTS";
+import { logger } from "../../services/logger";
 
 type ViewType = "translation" | "agent-editor" | "history" | "settings";
 
@@ -74,9 +75,22 @@ export default function MainPanel({
   const handleTranslate = useCallback(
     (text: string) => {
       const agent = getActiveAgent();
-      if (!agent) return;
-      const providers = useConfigStore.getState().providers;
-      if (providers.length === 0) return;
+      if (!agent) {
+        logger.error("翻译失败: 没有活跃的智能体 (activeAgentId 可能为空或 agents 列表为空)");
+        return;
+      }
+      const state = useConfigStore.getState();
+      const providers = state.providers;
+      if (providers.length === 0) {
+        logger.error(
+          `翻译失败: 没有配置任何 API 服务商 (providers 为空). ` +
+          `localModel.enabled=${state.settings.localModel.enabled} activeProviderId=${state.activeProviderId}`
+        );
+        return;
+      }
+      logger.info(
+        `翻译请求: agent="${agent.name}" text_len=${text.length} providers=${providers.map(p => p.id).join(",")}`
+      );
       translateAll(text, agent, providers);
     },
     [getActiveAgent, translateAll]

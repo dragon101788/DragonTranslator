@@ -5,6 +5,7 @@ import {
 } from "../services/translation";
 import type { TranslationAgent, LLMProvider } from "../types";
 import { useHistoryStore } from "../stores/historyStore";
+import { logger } from "../services/logger";
 
 export interface CardStream {
   providerId: string;
@@ -65,6 +66,7 @@ export function useMultiTranslate() {
 
         // Skip providers with no API key (except local)
         if (provider.id !== "local" && !provider.apiKey) {
+          logger.warn(`跳过 provider "${provider.name}": 未配置 API Key`);
           setCards((prev) =>
             prev.map((c) =>
               c.providerId === provider.id

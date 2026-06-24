@@ -102,6 +102,10 @@ async function loadFromFile(): Promise<boolean> {
   const store = await getStore();
   const data = await store.get<PersistedData>("app");
   if (data) {
+    // Always ensure local provider is present (same as loadDefaults)
+    if (data.settings?.localModel?.enabled !== false) {
+      data.providers = ensureLocalProvider(data.providers || []);
+    }
     applySnapshot(data);
     syncLogLevel(data.settings?.logLevel);
     logger.info(
