@@ -39,10 +39,11 @@
     {
       "label": "🏷️ 发布 Release",
       "type": "shell",
-      "command": "git tag -a ${input:tagVersion} -m '${input:tagVersion}'; git push origin ${input:tagVersion}",
+      "command": "$exe='src-tauri\\target\\release\\龙腾翻译.exe'; $zip='DragonTranslator.zip'; if (-not(Test-Path $zip) -or (Test-Path $exe) -and (Get-Item $exe).LastWriteTime -gt (Get-Item $zip).LastWriteTime) { Write-Output '>>> ZIP 过期或缺失, 重新打包...'; & '.\\打包.bat' 'silent' }; Write-Output '>>> 打 Tag...'; git tag -a ${input:tagVersion} -m '${input:tagVersion}'; git push origin ${input:tagVersion}; Write-Output '>>> Release Tag 已推送'",
       "options": { "cwd": "${workspaceFolder}" },
       "problemMatcher": [],
-      "detail": "打 Tag → push → 在 GitHub 上创建 Release"
+      "detail": "检测 ZIP 是否最新 → 如需要则重新打包 → 打 Tag → push"
+    },
     },
     {
       "label": "📂 打开输出目录",

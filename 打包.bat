@@ -52,5 +52,4 @@ echo   Build SUCCESS
 echo   .\DragonTranslator.zip  (unzip anywhere)
 echo ========================================
 
-echo.
-pause
+if not "%1"=="silent" pause
