@@ -106,6 +106,34 @@ npx tauri dev
 Vite 端口：**5157**（vite.config.ts strictPort 指定）
 快捷键：**Ctrl+Alt+X**（全局切换窗口显隐，设置面板可自定义）
 
+## 日志系统
+
+所有日志统一写入 `~/Dragon/Translator/logs/`，出问题时优先检查此目录：
+
+| 文件 | 来源 | 内容 |
+|------|------|------|
+| `logs/app.log` | 预留 (Rust `println!` 输出到控制台) | 应用级日志 |
+| `logs/frontend.log` | `src/services/logger.ts` → `log_frontend` Tauri 命令 | 前端 TS 关键事件 |
+| `logs/llama.log` | `llama_manager.rs` — llamafile 子进程 stderr | 本地模型启动/运行日志 |
+| `logs/piper.log` | `tts.rs` — piper 子进程 stderr | TTS 引擎错误日志 |
+
+**使用方式**：
+
+```typescript
+// 前端 TS
+import { logger } from "../services/logger";
+logger.info("翻译开始");
+logger.error("TTS 失败: " + msg);
+```
+
+```rust
+// Rust 后端
+crate::logger::write_raw("piper", &stderr_output);
+crate::logger::log("TTS", "speech synthesized");
+```
+
+**自动分析**：出问题时，Agent 应首先读取 `~/Dragon/Translator/logs/` 下的日志文件来定位根因。
+
 ## 开发服务自动重启
 
 - **每次修改 `src-tauri/` 下的 Rust 代码后**，必须重启 `npx tauri dev`（前端 HMR 只热更新 TS/JS，不更新 Rust）
@@ -181,4 +209,6 @@ Vite 端口：**5157**（vite.config.ts strictPort 指定）
 - [x] 主题系统（深色 / 月光白 / 暗夜紫）
 - [x] 字号滑块（12–20px，全局缩放）
 - [x] user/ 编译期嵌入 + 逐文件 mtime 释放 + 默认配置播种
+- [x] Piper 神经网络 TTS（中文/英语/多语言下载）
+- [x] 统一日志系统（TS/RS/子进程日志写入 logs/）
 - [ ] i18n 多语言界面

@@ -306,6 +306,7 @@ pub fn tts_speak(text: String, lang: String, voice: Option<String>) -> Result<()
         stderr.read_to_string(&mut stderr_output).ok();
         if !stderr_output.is_empty() {
             eprintln!("[TTS] piper stderr:\n{}", stderr_output.trim());
+            crate::logger::write_raw("piper", &stderr_output);
         }
     }
 
