@@ -1,4 +1,4 @@
-﻿param(
+param(
     [ValidateSet("patch","minor","major")]
     [string]$Bump = "patch"
 )
@@ -22,7 +22,8 @@ $new = "$($v[0]).$($v[1]).$($v[2])"
 Write-Host "New version: $new"
 
 # 3. Write version to Cargo.toml and tauri.conf.json
-(Get-Content $cargo -Raw) -replace 'version\s*=\s*"[^"]*"', "version = `"$new`"" | Set-Content $cargo -NoNewline
+# (?m) = multiline mode so ^ matches line start (only package-level version, not dep versions)
+(Get-Content $cargo -Raw) -replace '(?m)^version\s*=\s*"[^"]*"', "version = `"$new`"" | Set-Content $cargo -NoNewline
 (Get-Content $tauri -Raw) -replace '"version"\s*:\s*"[^"]*"', "`"version`": `"$new`"" | Set-Content $tauri -NoNewline
 Write-Host "Version files updated"
 
@@ -47,4 +48,14 @@ git commit -m "chore: bump version to $new"
 git tag -a "v$new" -m "v$new"
 git push origin "v$new"
 git push origin master
-Write-Host ">>> Release v$new pushed"
+
+# 6. Create GitHub Release (requires gh CLI authenticated)
+$repo = "dragon101788/DragonTranslator"
+try {
+    Write-Host "Creating GitHub Release..."
+    gh release create "v$new" "$zip" --repo $repo --title "v$new" --notes "Release v$new" 2>&1
+    Write-Host ">>> Release v$new published with asset!"
+} catch {
+    Write-Host ">>> Tag v$new pushed. To create Release: open https://github.com/$repo/releases/new"
+    Start-Process "https://github.com/$repo/releases/new?tag=v$new"
+}
