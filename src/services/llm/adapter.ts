@@ -35,7 +35,7 @@ export class LLMAdapter {
     const endpoint = this.getEndpoint();
 
     const body = JSON.stringify({ ...request, stream: false });
-    logger.debug(
+    logger.info(
       `[LLM] chat → ${request.model}\n` +
         `  system: ${request.messages.find((m) => m.role === "system")?.content?.slice(0, 300) || "(none)"}\n` +
         `  user:   ${request.messages.find((m) => m.role === "user")?.content?.slice(0, 300) || "(none)"}\n` +
@@ -71,8 +71,13 @@ export class LLMAdapter {
       throw { message: "API 返回了空响应" } as LLMError;
     }
 
+    const content = data.choices[0].message.content;
+    logger.info(
+      `[LLM] chat ← response (${content.length} chars):\n  ${content.slice(0, 500)}`
+    );
+
     return {
-      content: data.choices[0].message.content,
+      content,
       usage: data.usage,
     };
   }
@@ -84,7 +89,7 @@ export class LLMAdapter {
   ): Promise<{ usage: ChatCompletionResponse["usage"] }> {
     const endpoint = this.getEndpoint();
 
-    logger.debug(
+    logger.info(
       `[LLM] chatStream → ${request.model}\n` +
         `  system: ${request.messages.find((m) => m.role === "system")?.content?.slice(0, 300) || "(none)"}\n` +
         `  user:   ${request.messages.find((m) => m.role === "user")?.content?.slice(0, 300) || "(none)"}\n` +

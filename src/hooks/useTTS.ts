@@ -69,7 +69,7 @@ export function useTTS() {
 
           const startTime = performance.now();
           console.log(TAG, `invoking tts_speak lang="${effectiveLang}" voice="${voice || "auto"}"`);
-          logger.debug(`TTS invoking tts_speak lang="${effectiveLang}" voice="${voice || "auto"}"`);
+          logger.info(`TTS invoking tts_speak lang="${effectiveLang}" voice="${voice || "auto"}"`);
           const { invoke } = await import("@tauri-apps/api/core");
           await invoke("tts_speak", {
             text: clean,
