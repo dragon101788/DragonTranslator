@@ -314,19 +314,23 @@ pub fn run() {
             // Start the single-instance activation listener (Windows only)
             spawn_activate_listener(app.handle().clone());
 
+            // Initialize log directory (before ensure_user_files so errors are logged)
+            logger::init_logs(&logger::log_dir());
+
             // Ensure runtime dependency files are released
             // (handles both debug and release modes internally)
             match user_files::ensure_user_files() {
                 Ok(log) => {
                     for entry in &log {
                         println!("[UserFiles] {}", entry);
+                        logger::write_raw("startup", &format!("[UserFiles] {}", entry));
                     }
                 }
-                Err(e) => eprintln!("[UserFiles] 错误: {}", e),
+                Err(e) => {
+                    eprintln!("[UserFiles] 错误: {}", e);
+                    logger::write_raw("startup", &format!("[UserFiles] ERROR: {}", e));
+                }
             }
-
-            // Initialize log directory
-            logger::init_logs(&logger::log_dir());
 
             // ---- System tray ----
             let show_item = MenuItemBuilder::with_id("show", "显示窗口").build(app)?;

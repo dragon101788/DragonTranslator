@@ -50,13 +50,17 @@ fn find_zip_bounds(data: &[u8], eocd_offset: u64) -> Option<(u64, u64)> {
     let eocd = eocd_offset as usize;
     let comment_len = u16::from_le_bytes([data[eocd + 20], data[eocd + 21]]) as usize;
     let zip_end = eocd + 22 + comment_len;
-    // The EOCD contains offset to Central Directory; use it to find start
-    let cd_offset = u32::from_le_bytes([
+    // The EOCD's CD offset (bytes 16-19) points to Central Directory, which is
+    // relative to the ZIP start. To find the ZIP start within the exe, scan from
+    // the beginning for the first PK\x03\x04 (Local File Header) marker.
+    // cd_offset from EOCD is relative to ZIP start, not helpful for absolute pos.
+    let cd_offset_from_eocd = u32::from_le_bytes([
         data[eocd + 16], data[eocd + 17], data[eocd + 18], data[eocd + 19],
     ]) as u64;
-    // Scan forward from CD offset to find actual start (first PK\x03\x04)
-    for pos in cd_offset as usize..zip_end {
+    // Scan forward from beginning to find ZIP start
+    for pos in 0..eocd {
         if data[pos..pos + 4] == *b"PK\x03\x04" {
+            let _ = cd_offset_from_eocd; // preserved for reference
             return Some((pos as u64, (zip_end - pos) as u64));
         }
     }
