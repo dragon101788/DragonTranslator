@@ -41,18 +41,12 @@ Write-Host "New version: $new (bump $Bump from $latest)"
 (Get-Content $tauri -Raw) -replace '"version"\s*:\s*"[^"]*"', "`"version`": `"$new`"" | Set-Content $tauri -NoNewline
 Write-Host "Version files updated"
 
-# 4. Check ZIP freshness
-$exe = "src-tauri\target\release\龙腾翻译.exe"
-$zip = "DragonTranslator.zip"
-$needRebuild = -not (Test-Path $zip)
-if (-not $needRebuild -and (Test-Path $exe)) {
-    $exeTime = (Get-Item $exe).LastWriteTime
-    $zipTime = (Get-Item $zip).LastWriteTime
-    $needRebuild = $exeTime -gt $zipTime
-}
-if ($needRebuild) {
-    Write-Host "ZIP stale/missing, rebuilding..."
-    & ".\打包.bat" "silent"
+# 4. Always rebuild before release
+Write-Host "Building release..."
+& ".\打包.bat" "silent"
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "ERROR: Build failed"
+    exit 1
 }
 
 # 5. Check tag doesn't already exist
