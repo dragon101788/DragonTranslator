@@ -46,8 +46,6 @@ export function useMultiTranslate() {
       text: string,
       agent: TranslationAgent,
       providers: LLMProvider[],
-      sourceLang?: string,
-      targetLang?: string
     ) => {
       if (!text.trim()) return;
 
@@ -90,7 +88,7 @@ export function useMultiTranslate() {
         (async () => {
           try {
             const output = await translateStream(
-              { text, agent, provider, sourceLang, targetLang },
+              { text, agent, provider },
               (chunk) => {
                 setCards((prev) =>
                   prev.map((c) =>
@@ -113,7 +111,7 @@ export function useMultiTranslate() {
             );
 
             const record = createTranslationRecord(
-              { text, agent, provider, sourceLang, targetLang },
+              { text, agent, provider },
               output,
               elapsed
             );

@@ -20,8 +20,6 @@ export function useTranslate() {
       text: string,
       agent: TranslationAgent,
       provider: LLMProvider,
-      sourceLang?: string,
-      targetLang?: string
     ) => {
       if (!text.trim()) return;
       if (!provider.apiKey) {
@@ -41,7 +39,7 @@ export function useTranslate() {
       const start = Date.now();
       try {
         const output = await translateStream(
-          { text, agent, provider, sourceLang, targetLang },
+          { text, agent, provider },
           (chunk) => {
             setResult(chunk);
           },
@@ -50,11 +48,11 @@ export function useTranslate() {
 
         const elapsed = Date.now() - start;
         setLatency(elapsed);
-        logger.info(`翻译完成 ${elapsed}ms [${sourceLang || "auto"}->${targetLang || "auto"}]`);
+        logger.info(`翻译完成 ${elapsed}ms`);
 
         // Save complete result to history
         const record = createTranslationRecord(
-          { text, agent, provider, sourceLang, targetLang },
+          { text, agent, provider },
           output,
           elapsed
         );

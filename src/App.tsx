@@ -141,15 +141,6 @@ function App() {
   const [view, setView] = useState<ViewType>("translation");
   const [editingAgentId, setEditingAgentId] = useState<string | null>(null);
 
-  const [sourceLang, setSourceLang] = useState("auto");
-  const [targetLang, setTargetLang] = useState("en");
-
-  const handleSwapLang = useCallback(() => {
-    if (sourceLang === "auto") return;
-    setSourceLang(targetLang);
-    setTargetLang(sourceLang);
-  }, [sourceLang, targetLang]);
-
   // ---- Window close logic ----
 
   const handleCloseRequest = useCallback(() => {
@@ -203,11 +194,6 @@ function App() {
               setView("translation");
             }}
             onBack={goToTranslation}
-            sourceLang={sourceLang}
-            targetLang={targetLang}
-            onSourceLangChange={setSourceLang}
-            onTargetLangChange={setTargetLang}
-            onSwapLang={handleSwapLang}
           />
         </div>
       </div>

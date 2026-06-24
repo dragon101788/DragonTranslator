@@ -8,7 +8,6 @@ interface OutputCardProps {
   onStop: (providerId: string) => void;
   copyState: Record<string, "idle" | "copied">;
   onCopy: (providerId: string, text: string) => void;
-  targetLang: string;
 }
 
 export default function OutputCard({
@@ -16,7 +15,6 @@ export default function OutputCard({
   onStop,
   copyState,
   onCopy,
-  targetLang,
 }: OutputCardProps) {
   const tts = useTTS();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -83,7 +81,7 @@ export default function OutputCard({
                 {copied ? <Check size={13} /> : <Copy size={13} />}
               </button>
               <button
-                onClick={() => tts.speak(card.result!.replace(/<[^>]*>/g, ""), targetLang)}
+                onClick={() => tts.speak(card.result!.replace(/<[^>]*>/g, ""), "")}
                 className="p-1 rounded hover:bg-lexi-hover text-lexi-text-muted hover:text-lexi-text transition-colors"
                 title="朗读"
               >

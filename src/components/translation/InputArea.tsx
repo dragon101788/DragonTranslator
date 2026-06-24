@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Send, X, ArrowLeftRight, StopCircle, Volume2 } from "lucide-react";
+import { Send, X, StopCircle, Volume2 } from "lucide-react";
 import { useTTS } from "../../hooks/useTTS";
 
 interface InputAreaProps {
@@ -7,39 +7,13 @@ interface InputAreaProps {
   onStop: () => void;
   translating: boolean;
   onClear: () => void;
-  sourceLang: string;
-  targetLang: string;
-  onSourceLangChange: (lang: string) => void;
-  onTargetLangChange: (lang: string) => void;
-  onSwapLang: () => void;
 }
-
-const LANGUAGES: Record<string, string> = {
-  auto: "自动检测",
-  zh: "中文",
-  en: "英语",
-  ja: "日本語",
-  ko: "한국어",
-  fr: "Français",
-  de: "Deutsch",
-  es: "Español",
-  ru: "Русский",
-  pt: "Português",
-  ar: "العربية",
-  th: "ไทย",
-  vi: "Tiếng Việt",
-};
 
 export default function InputArea({
   onTranslate,
   onStop,
   translating,
   onClear,
-  sourceLang,
-  targetLang,
-  onSourceLangChange,
-  onTargetLangChange,
-  onSwapLang,
 }: InputAreaProps) {
   const [text, setText] = useState("");
   const [charCount, setCharCount] = useState(0);
@@ -107,44 +81,8 @@ export default function InputArea({
 
   return (
     <div className="flex flex-col bg-lexi-card border border-lexi-border rounded-xl overflow-hidden">
-      {/* Lang selector + controls bar */}
-      <div className="flex items-center justify-between px-3 py-2 border-b border-lexi-border/50 select-none">
-        <div className="flex items-center gap-2 text-sm">
-          <select
-            value={sourceLang}
-            onChange={(e) => onSourceLangChange(e.target.value)}
-            className="bg-lexi-input text-lexi-text border border-lexi-border rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-lexi-accent"
-          >
-            {Object.entries(LANGUAGES).map(([key, label]) => (
-              <option key={key} value={key}>
-                {label}
-              </option>
-            ))}
-          </select>
-
-          <button
-            onClick={onSwapLang}
-            className="p-1 rounded hover:bg-lexi-hover text-lexi-text-muted hover:text-lexi-text transition-colors"
-            title="交换语言方向"
-          >
-            <ArrowLeftRight size={14} />
-          </button>
-
-          <select
-            value={targetLang}
-            onChange={(e) => onTargetLangChange(e.target.value)}
-            className="bg-lexi-input text-lexi-text border border-lexi-border rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-lexi-accent"
-          >
-            {Object.entries(LANGUAGES)
-              .filter(([k]) => k !== "auto")
-              .map(([key, label]) => (
-                <option key={key} value={key}>
-                  {label}
-                </option>
-              ))}
-          </select>
-        </div>
-
+      {/* Controls bar */}
+      <div className="flex items-center justify-end px-3 py-2 border-b border-lexi-border/50 select-none">
         <div className="flex items-center gap-2">
           {text && (
             <button
@@ -157,7 +95,7 @@ export default function InputArea({
           )}
           {text && (
             <button
-              onClick={() => tts.speak(text, sourceLang)}
+              onClick={() => tts.speak(text, "")}
               className="p-1 rounded hover:bg-lexi-hover text-lexi-text-muted hover:text-lexi-text transition-colors"
               title="朗读原文"
             >

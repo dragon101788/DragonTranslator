@@ -16,11 +16,6 @@ interface MainPanelProps {
   editingAgentId: string | null;
   onCloseAgentEditor: () => void;
   onBack: () => void;
-  sourceLang: string;
-  targetLang: string;
-  onSourceLangChange: (lang: string) => void;
-  onTargetLangChange: (lang: string) => void;
-  onSwapLang: () => void;
 }
 
 export default function MainPanel({
@@ -28,11 +23,6 @@ export default function MainPanel({
   editingAgentId,
   onCloseAgentEditor,
   onBack,
-  sourceLang,
-  targetLang,
-  onSourceLangChange,
-  onTargetLangChange,
-  onSwapLang,
 }: MainPanelProps) {
   const {
     cards,
@@ -87,9 +77,9 @@ export default function MainPanel({
       if (!agent) return;
       const providers = useConfigStore.getState().providers;
       if (providers.length === 0) return;
-      translateAll(text, agent, providers, sourceLang, targetLang);
+      translateAll(text, agent, providers);
     },
-    [getActiveAgent, translateAll, sourceLang, targetLang]
+    [getActiveAgent, translateAll]
   );
 
   return (
@@ -135,11 +125,6 @@ export default function MainPanel({
               onStop={stopAll}
               translating={anyTranslating}
               onClear={clear}
-              sourceLang={sourceLang}
-              targetLang={targetLang}
-              onSourceLangChange={onSourceLangChange}
-              onTargetLangChange={onTargetLangChange}
-              onSwapLang={onSwapLang}
             />
             {cards.map((card) => (
               <OutputCard
@@ -148,7 +133,6 @@ export default function MainPanel({
                 onStop={stopOne}
                 copyState={copyState}
                 onCopy={handleCopy}
-                targetLang={targetLang}
               />
             ))}
           </div>

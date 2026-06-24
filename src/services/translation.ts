@@ -5,8 +5,6 @@ export interface TranslateInput {
   text: string;
   agent: TranslationAgent;
   provider: LLMProvider;
-  sourceLang?: string;
-  targetLang?: string;
 }
 
 export interface TranslateOutput {
@@ -19,15 +17,10 @@ export async function translate(input: TranslateInput): Promise<TranslateOutput>
 
   const model = input.agent.config.model || input.provider.models[0] || "gpt-4o-mini";
 
-  const langHint =
-    input.sourceLang && input.targetLang
-      ? `\n\n[IMPORTANT OVERRIDE] The user selected target language: ${input.targetLang}. You MUST output in this language only. Ignore any default target language mentioned above.`
-      : "";
-
   const result = await adapter.chat({
     model,
     messages: [
-      { role: "system", content: input.agent.systemPrompt + langHint },
+      { role: "system", content: input.agent.systemPrompt },
       { role: "user", content: input.text },
     ],
     temperature: input.agent.config.temperature,
@@ -53,18 +46,13 @@ export async function translateStream(
   const model =
     input.agent.config.model || input.provider.models[0] || "gpt-4o-mini";
 
-  const langHint =
-    input.sourceLang && input.targetLang
-      ? `\n\n[IMPORTANT OVERRIDE] The user selected target language: ${input.targetLang}. You MUST output in this language only. Ignore any default target language mentioned above.`
-      : "";
-
   let fullContent = "";
 
   const { usage } = await adapter.chatStream(
     {
       model,
       messages: [
-        { role: "system", content: input.agent.systemPrompt + langHint },
+        { role: "system", content: input.agent.systemPrompt },
         { role: "user", content: input.text },
       ],
       temperature: input.agent.config.temperature,
@@ -97,8 +85,8 @@ export function createTranslationRecord(
     agentName: input.agent.name,
     sourceText: input.text,
     translatedText: output.content,
-    sourceLang: input.sourceLang || "auto",
-    targetLang: input.targetLang || "en",
+    sourceLang: "auto",
+    targetLang: "unknown",
     providerName: input.provider.name,
     model: input.agent.config.model || input.provider.models[0] || "unknown",
     latency,

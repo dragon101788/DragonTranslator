@@ -111,7 +111,7 @@ export default function AgentEditor({ agentId, onClose }: AgentEditorProps) {
             </div>
 
             <div className="flex-1 space-y-3">
-              <div className="flex gap-2 items-start">
+              <div>
                 <div className="flex-1">
                   <label className="block text-xs text-lexi-text-muted mb-1">
                     名称 <span className="text-red-400">*</span>
@@ -125,15 +125,6 @@ export default function AgentEditor({ agentId, onClose }: AgentEditorProps) {
                     className="w-full bg-lexi-input border border-lexi-border rounded-lg px-3 py-2 text-sm text-lexi-text placeholder-lexi-text-muted/40 focus:outline-none focus:ring-1 focus:ring-lexi-accent"
                   />
                 </div>
-                {isNew && (
-                  <button
-                    onClick={saveIfValid}
-                    disabled={!name.trim() || !systemPrompt.trim()}
-                    className="mt-5 px-4 py-2 rounded-lg bg-lexi-accent hover:bg-lexi-accent-hover disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-medium transition-all"
-                  >
-                    创建
-                  </button>
-                )}
               </div>
               <div>
                 <label className="block text-xs text-lexi-text-muted mb-1">
@@ -232,6 +223,13 @@ export default function AgentEditor({ agentId, onClose }: AgentEditorProps) {
               className="px-4 py-2 rounded-lg text-sm text-lexi-text-muted hover:bg-lexi-hover transition-colors"
             >
               取消
+            </button>
+            <button
+              onClick={saveIfValid}
+              disabled={!name.trim() || !systemPrompt.trim()}
+              className="px-5 py-2 rounded-lg bg-lexi-accent hover:bg-lexi-accent-hover disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-medium transition-all"
+            >
+              创建
             </button>
           </div>
         )}

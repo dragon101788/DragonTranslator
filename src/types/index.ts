@@ -48,9 +48,6 @@ export interface AppSettings {
   // Global shortcut
   shortcutModifiers: string[];
   shortcutKey: string;
-  // Default language direction
-  defaultSourceLang: string;
-  defaultTargetLang: string;
   // Window
   alwaysOnTop: boolean;
   // WebDAV sync
@@ -115,8 +112,6 @@ export const DEFAULT_PROVIDER: LLMProvider = {
 export const DEFAULT_SETTINGS: AppSettings = {
   shortcutModifiers: ["Ctrl", "Alt"],
   shortcutKey: "X",
-  defaultSourceLang: "auto",
-  defaultTargetLang: "en",
   alwaysOnTop: false,
   webdav: {
     enabled: false,
