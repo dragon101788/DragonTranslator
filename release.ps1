@@ -41,9 +41,9 @@ Write-Host "New version: $new (bump $Bump from $latest)"
 (Get-Content $tauri -Raw) -replace '"version"\s*:\s*"[^"]*"', "`"version`": `"$new`"" | Set-Content $tauri -NoNewline
 Write-Host "Version files updated"
 
-# 4. Always rebuild before release
+# 4. Always rebuild before release (use cmd /c to avoid PS5.1 Chinese filename encoding issues)
 Write-Host "Building release..."
-& ".\打包.bat" "silent"
+cmd /c "打包.bat silent"
 if ($LASTEXITCODE -ne 0) {
     Write-Host "ERROR: Build failed"
     exit 1
