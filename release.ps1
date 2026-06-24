@@ -41,9 +41,17 @@ Write-Host "New version: $new (bump $Bump from $latest)"
 (Get-Content $tauri -Raw) -replace '"version"\s*:\s*"[^"]*"', "`"version`": `"$new`"" | Set-Content $tauri -NoNewline
 Write-Host "Version files updated"
 
-# 4. Always rebuild before release (use cmd /c to avoid PS5.1 Chinese filename encoding issues)
-Write-Host "Building release..."
-cmd /c "打包.bat silent"
+# 4. Find and run the build script at runtime
+#    (avoids PS5.1 encoding issues with Chinese filenames in script source)
+$buildScript = Get-ChildItem -Path . -Filter "*.bat" |
+    Where-Object { $_.Name -notlike '[a-zA-Z]*' } |
+    Select-Object -First 1
+if (-not $buildScript) {
+    Write-Host "ERROR: Build script not found (non-ASCII .bat)"
+    exit 1
+}
+Write-Host "Building release via $($buildScript.Name)..."
+cmd /c "cd /d `"$PSScriptRoot`" && `"$($buildScript.Name)`" silent"
 if ($LASTEXITCODE -ne 0) {
     Write-Host "ERROR: Build failed"
     exit 1
@@ -78,6 +86,7 @@ Write-Host "=== Git push OK ==="
 
 # 7. Create GitHub Release + upload ZIP (with retry)
 $repo = "dragon101788/DragonTranslator"
+$zip = "DragonTranslator.zip"
 $zipSize = [math]::Round((Get-Item $zip).Length / 1MB, 0)
 
 # 7a. Create release (without asset)
