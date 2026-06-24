@@ -343,7 +343,7 @@ export default function TTSTab() {
           <button onClick={openVoicesDir}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-lexi-accent-hover hover:bg-lexi-accent/10 transition-colors w-full justify-center">
             <FolderOpen size={13} />
-            <span>打开语音模型目录 ({voicesDir || "~/Dragon/Translator/piper-voices/"})</span>
+            <span>打开语音模型目录 ({voicesDir || "./piper-voices/"})</span>
           </button>
         </div>
       )}

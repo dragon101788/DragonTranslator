@@ -4,9 +4,9 @@ import tailwindcss from "@tailwindcss/vite";
 import fs from "fs";
 import path from "path";
 
-// Serve user/default-config.json for browser/dev mode fallback
+// Serve runtime/default-config.json for browser/dev mode fallback
 function defaultConfigPlugin() {
-  const src = path.resolve(__dirname, "user", "default-config.json");
+  const src = path.resolve(__dirname, "runtime", "default-config.json");
   return {
     name: "default-config",
     configureServer(server: any) {
@@ -53,7 +53,7 @@ export default defineConfig({
     port: 5157,
     strictPort: false, // fallback to 5158, 5159... if taken
     watch: {
-      ignored: ["**/src-tauri/**"],
+      ignored: ["**/src-tauri/**", "**/runtime/**", "**/config.json"],
     },
   },
 });

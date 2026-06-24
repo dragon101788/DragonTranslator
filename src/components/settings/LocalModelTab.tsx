@@ -266,7 +266,7 @@ export default function LocalModelTab() {
         </div>
         <div className="flex items-center justify-between mt-1.5">
           <p className="text-xs text-lexi-text-muted">
-            路径相对于 ~/Dragon/Translator/，也支持绝对路径
+            路径相对于应用目录，也支持绝对路径
           </p>
           {isRunning && (
             <button

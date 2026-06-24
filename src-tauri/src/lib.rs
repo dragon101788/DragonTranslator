@@ -1,4 +1,5 @@
 mod user_files;
+mod paths;
 mod llama_manager;
 mod tts;
 mod logger;
@@ -191,36 +192,33 @@ fn parse_code(key: &str) -> Result<Code, String> {
     }
 }
 
-/// Read the embedded default-config.json (dev: user/ in source tree; release: embedded).
+/// Returns the app directory path (for config file, etc.).
+#[tauri::command]
+fn get_app_dir() -> Result<String, String> {
+    Ok(paths::app_dir().to_string_lossy().to_string())
+}
+
+/// Read default-config.json from runtime directory.
 #[tauri::command]
 fn get_default_config() -> Result<String, String> {
     user_files::get_default_config_json()
 }
 
-/// Ensure runtime files (gguf, default-config.json, etc.) are present.
-/// Call at startup and after updates. Returns a list of what was released.
-#[tauri::command]
-fn ensure_user_files() -> Result<Vec<String>, String> {
-    user_files::ensure_user_files()
-}
-
-/// Append a line to ~/Dragon/Translator/logs/frontend.log
+/// Append a line to logs/frontend.log
 #[tauri::command]
 fn log_frontend(level: String, message: String) {
+    let dir = paths::logs_dir();
+    let _ = std::fs::create_dir_all(&dir);
     logger::write_raw("frontend", &format!("[{}] {}", level, message));
 }
 
-/// Open the config directory ~/Dragon/Translator/ in File Explorer.
+/// Open the app directory in File Explorer.
 #[tauri::command]
 fn open_user_dir() -> Result<(), String> {
-    let home = std::env::var("USERPROFILE")
-        .or_else(|_| std::env::var("HOME"))
-        .map_err(|_| "无法获取用户目录".to_string())?;
-    let config_dir = format!("{}\\Dragon\\Translator", home.trim_end_matches('\\'));
-    // Ensure directory exists before opening
-    let _ = std::fs::create_dir_all(&config_dir);
+    let dir = paths::app_dir();
+    let _ = std::fs::create_dir_all(&dir);
     std::process::Command::new("explorer")
-        .arg(&config_dir)
+        .arg(dir.to_string_lossy().to_string())
         .spawn()
         .map_err(|e| format!("无法打开目录: {}", e))?;
     Ok(())
@@ -314,19 +312,17 @@ pub fn run() {
             // Start the single-instance activation listener (Windows only)
             spawn_activate_listener(app.handle().clone());
 
-            // Ensure runtime dependency files are released
-            // (handles both debug and release modes internally)
-            match user_files::ensure_user_files() {
-                Ok(log) => {
-                    for entry in &log {
-                        println!("[UserFiles] {}", entry);
-                    }
-                }
-                Err(e) => eprintln!("[UserFiles] 错误: {}", e),
-            }
-
             // Initialize log directory
-            logger::init_logs(&logger::log_dir());
+            let logs = paths::logs_dir();
+            let _ = std::fs::create_dir_all(&logs);
+            logger::init_logs(&logs.to_string_lossy());
+
+            // Seed config.json from default-config.json on first run
+            let app_root = paths::app_dir();
+            let config_path = app_root.join("config.json");
+            if !config_path.exists() {
+                user_files::seed_config(&app_root);
+            }
 
             // ---- System tray ----
             let show_item = MenuItemBuilder::with_id("show", "显示窗口").build(app)?;
@@ -386,7 +382,7 @@ pub fn run() {
             configure_shortcut,
             open_user_dir,
             get_default_config,
-            ensure_user_files,
+            get_app_dir,
             llama_manager::start_local_model,
             llama_manager::stop_local_model,
             llama_manager::get_local_model_status,

@@ -26,10 +26,9 @@ pub fn log(tag: &str, msg: &str) {
 
 /// Write raw bytes (e.g. subprocess stderr) to a log file.
 pub fn write_raw(tag: &str, content: &str) {
-    let home = std::env::var("USERPROFILE")
-        .or_else(|_| std::env::var("HOME"))
-        .unwrap_or_else(|_| ".".to_string());
-    let path = format!("{}\\Dragon\\Translator\\logs\\{}.log", home.trim_end_matches('\\'), tag);
+    let dir = crate::paths::logs_dir();
+    let _ = std::fs::create_dir_all(&dir);
+    let path = dir.join(format!("{}.log", tag));
     if let Ok(mut f) = OpenOptions::new().create(true).append(true).open(&path) {
         let ts = SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
@@ -37,12 +36,4 @@ pub fn write_raw(tag: &str, content: &str) {
             .as_secs();
         let _ = write!(f, "--- {} ---\n{}\n", ts, content.trim());
     }
-}
-
-/// Log directory path
-pub fn log_dir() -> String {
-    let home = std::env::var("USERPROFILE")
-        .or_else(|_| std::env::var("HOME"))
-        .unwrap_or_else(|_| ".".to_string());
-    format!("{}\\Dragon\\Translator\\logs", home.trim_end_matches('\\'))
 }

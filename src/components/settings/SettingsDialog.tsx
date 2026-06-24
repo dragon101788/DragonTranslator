@@ -375,7 +375,7 @@ export default function SettingsDialog({ onClose }: SettingsDialogProps) {
         {isTauri && (
           <div className="flex items-center justify-between px-5 py-2.5 border-t border-lexi-border">
             <span className="text-xs text-lexi-text-muted">
-              配置文件: ~\Dragon\Translator\config.json
+              配置文件: config.json (应用目录)
             </span>
             <button
               onClick={handleOpenUserDir}

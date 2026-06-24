@@ -8,7 +8,7 @@ echo.
 
 call npx tauri build
 
-:: Find the built exe (Chinese name, avoid encoding issues)
+:: Find the built exe (Chinese name)
 set "SRC_DIR=src-tauri\target\release"
 set "EXE_FILE="
 for %%f in ("%SRC_DIR%\*.exe") do (
@@ -24,29 +24,32 @@ if "%EXE_FILE%"=="" (
 )
 
 echo.
-echo   Packaging user/ -^> appending ZIP to exe...
+echo   Packaging runtime/ + exe -^> DragonTranslator.zip ...
 
-:: Create ZIP of user/ directory (no compression)
-powershell -NoProfile -Command "Compress-Archive -Path 'user\*' -DestinationPath '%SRC_DIR%\user.zip' -CompressionLevel NoCompression -Force"
-if not exist "%SRC_DIR%\user.zip" (
-    echo   Failed to create user.zip
-    pause
-    exit /b 1
-)
+:: Create release directory
+set "PKG_DIR=DragonTranslator"
+if exist "%PKG_DIR%" rmdir /s /q "%PKG_DIR%"
+mkdir "%PKG_DIR%"
 
-:: Append ZIP to exe -> self-extracting single exe
-copy /b "%SRC_DIR%\%EXE_FILE%" + "%SRC_DIR%\user.zip" ".\DragonTranslator.exe" >nul
+:: Copy runtime files (no compression, just structure)
+xcopy "runtime\*" "%PKG_DIR%\" /E /I /Y /Q >nul
 
-:: Clean up temp zip
-del "%SRC_DIR%\user.zip" 2>nul
+:: Copy exe into package
+copy /y "%SRC_DIR%\%EXE_FILE%" "%PKG_DIR%\%EXE_FILE%" >nul
 
-:: Also copy to release folder
-copy /y ".\DragonTranslator.exe" "%SRC_DIR%\DragonTranslator.exe" >nul
+:: Create ZIP
+powershell -NoProfile -Command "Compress-Archive -Path '%PKG_DIR%' -DestinationPath 'DragonTranslator.zip' -Force"
+
+:: Clean up temp dir
+rmdir /s /q "%PKG_DIR%"
+
+:: Copy ZIP to release dir for reference
+copy /y "DragonTranslator.zip" "%SRC_DIR%\DragonTranslator.zip" >nul
 
 echo.
 echo ========================================
 echo   Build SUCCESS
-echo   .\DragonTranslator.exe  (single exe)
+echo   .\DragonTranslator.zip  (unzip anywhere)
 echo ========================================
 
 echo.

@@ -1,5 +1,5 @@
 ﻿/**
- * Write a log line to ~/Dragon/Translator/logs/frontend.log via Tauri backend.
+ * Write a log line to logs/frontend.log via Tauri backend.
  * Falls back to console.log in browser mode.
  */
 export async function log(level: "info" | "warn" | "error", message: string) {

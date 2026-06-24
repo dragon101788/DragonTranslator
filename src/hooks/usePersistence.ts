@@ -69,13 +69,15 @@ let _storePromise: Promise<Store> | null = null;
 async function getStore(): Promise<Store> {
   if (!_storePromise) {
     _storePromise = (async () => {
-      // Store config in ~/Dragon/Translator/config.json
-      const { homeDir } = await import("@tauri-apps/api/path");
-      const base = await homeDir();
-      const storePath = `${base}${base.endsWith("\\") || base.endsWith("/") ? "" : "\\"}Dragon\\Translator\\${STORE_FILENAME}`;
+      console.log("[Persistence] getStore: resolving app dir...");
+      const { invoke } = await import("@tauri-apps/api/core");
+      const base = await invoke<string>("get_app_dir");
+      const storePath = `${base}\\${STORE_FILENAME}`;
+      console.log("[Persistence] getStore: path =", storePath);
       const { load } = await import("@tauri-apps/plugin-store");
       return load(storePath, { autoSave: true, defaults: {} });
     })().catch((e) => {
+      console.error("[Persistence] getStore FAILED:", e);
       _storePromise = null;
       throw e;
     });

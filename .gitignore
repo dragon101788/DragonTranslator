@@ -32,12 +32,14 @@ src-tauri/target/
 
 # Local portable data (contains API keys)
 dragon-translator-config.json
+config.json
+DragonTranslator.zip
 
-# Large user/ runtime files (distributed via ZIP append, not git)
-user/*.exe
-user/*.gguf
-user/piper/
-user/piper-voices/
+# Large runtime files (distributed via ZIP, not git)
+runtime/*.exe
+runtime/*.gguf
+runtime/piper/
+runtime/piper-voices/
 
 # Reference binaries
 llamafile/

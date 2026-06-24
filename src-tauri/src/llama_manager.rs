@@ -16,27 +16,14 @@ const DEFAULT_PORT: u16 = 5158;
 // Path resolution
 // ---------------------------------------------------------------------------
 
-/// `~/Dragon/Translator/` — runtime config directory
-fn runtime_dir() -> String {
-    let home = std::env::var("USERPROFILE")
-        .or_else(|_| std::env::var("HOME"))
-        .unwrap_or_else(|_| ".".to_string());
-    format!("{}\\Dragon\\Translator", home.trim_end_matches('\\'))
-}
-
-fn user_files_dir() -> String {
-    // Always use ~/Dragon/Translator/ (ensure_user_files copies from source tree at startup)
-    runtime_dir()
-}
-
 fn llamafile_path() -> String {
-    format!("{}\\{}", user_files_dir(), LLAMAFILE_EXE)
+    crate::paths::runtime_dir().join(LLAMAFILE_EXE).to_string_lossy().to_string()
 }
 
 fn log_file() -> String {
-    let dir = format!("{}\\logs", runtime_dir());
+    let dir = crate::paths::logs_dir();
     let _ = std::fs::create_dir_all(&dir);
-    format!("{}\\llama.log", dir)
+    dir.join("llama.log").to_string_lossy().to_string()
 }
 
 // ---------------------------------------------------------------------------
@@ -79,7 +66,7 @@ pub fn start_local_model(port: Option<u16>, model: Option<String>) -> Result<Str
     let model = if std::path::Path::new(&model_name).is_absolute() {
         model_name
     } else {
-        format!("{}\\{}", user_files_dir(), model_name)
+        format!("{}\\{}", crate::paths::runtime_dir().to_string_lossy(), model_name)
     };
 
     log(&format!("llamafile 路径: {}", exe));
@@ -147,7 +134,7 @@ pub fn start_local_model(port: Option<u16>, model: Option<String>) -> Result<Str
                     ));
                     *guard = None;
                     return Err(format!(
-                        "llamafile 进程意外退出 (exit code: {:?}), 请检查 ~/Dragon/Translator/llama.log",
+                        "llamafile 进程意外退出 (exit code: {:?}), 请检查 logs/llama.log",
                         status.code()
                     ));
                 }
@@ -170,7 +157,7 @@ pub fn start_local_model(port: Option<u16>, model: Option<String>) -> Result<Str
 
     log("超时: 60s 内端口未开放");
     Ok(format!(
-        "本地模型启动超时 (端口 {}), 请检查 ~/Dragon/Translator/llama.log",
+        "本地模型启动超时 (端口 {}), 请检查 logs/llama.log",
         port
     ))
 }

@@ -51,20 +51,12 @@ struct VoiceAudio {
 // Path resolution
 // ---------------------------------------------------------------------------
 
-fn user_files_dir() -> String {
-    // Always use ~/Dragon/Translator/ (ensure_user_files copies from source tree at startup)
-    let home = std::env::var("USERPROFILE")
-        .or_else(|_| std::env::var("HOME"))
-        .unwrap_or_else(|_| ".".to_string());
-    format!("{}\\Dragon\\Translator", home.trim_end_matches('\\'))
-}
-
 fn piper_exe_path() -> String {
-    format!("{}\\piper\\piper.exe", user_files_dir())
+    crate::paths::runtime_dir().join("piper").join("piper.exe").to_string_lossy().to_string()
 }
 
 fn piper_voices_dir() -> String {
-    format!("{}\\piper-voices", user_files_dir())
+    crate::paths::runtime_dir().join("piper-voices").to_string_lossy().to_string()
 }
 
 // ---------------------------------------------------------------------------
