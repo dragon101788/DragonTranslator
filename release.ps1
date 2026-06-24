@@ -60,6 +60,9 @@ git add $cargo $tauri
 if ($LASTEXITCODE -ne 0) { Write-Host "ERROR: git add failed"; exit 1 }
 git commit -m "chore: bump version to $new"
 if ($LASTEXITCODE -ne 0) { Write-Host "ERROR: git commit failed (nothing to commit?)"; exit 1 }
+git tag -a "v$new" -m "v$new"
+if ($LASTEXITCODE -ne 0) { Write-Host "ERROR: git tag failed"; exit 1 }
+
 
 Write-Host "Pushing tag v$new..."
 git push origin "v$new"
