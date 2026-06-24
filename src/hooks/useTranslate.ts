@@ -5,6 +5,7 @@ import {
 } from "../services/translation";
 import type { TranslationAgent, LLMProvider } from "../types";
 import { useHistoryStore } from "../stores/historyStore";
+import { logger } from "../services/logger";
 
 export function useTranslate() {
   const [translating, setTranslating] = useState(false);
@@ -49,6 +50,7 @@ export function useTranslate() {
 
         const elapsed = Date.now() - start;
         setLatency(elapsed);
+        logger.info(`翻译完成 ${elapsed}ms [${sourceLang || "auto"}->${targetLang || "auto"}]`);
 
         // Save complete result to history
         const record = createTranslationRecord(
@@ -58,7 +60,8 @@ export function useTranslate() {
         );
         addRecord(record);
       } catch (e: any) {
-        if (e?.name === "AbortError") return;
+        if (e?.name === "AbortError") { logger.info("翻译已中止"); return; }
+        logger.error(`翻译失败: ${e?.message || "未知错误"}`);
         setError(e?.message || "翻译失败，请检查网络和 API 配置");
       } finally {
         setTranslating(false);

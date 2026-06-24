@@ -5,6 +5,7 @@ import { useHistoryStore } from "../stores/historyStore";
 import type { Store } from "@tauri-apps/plugin-store";
 import type { TranslationAgent, LLMProvider, AppSettings } from "../types";
 import { DEFAULT_SETTINGS } from "../types";
+import { logger } from "../services/logger";
 
 const STORE_FILENAME = "config.json";
 const LS_KEY = "dragon-translator-config";
@@ -100,7 +101,7 @@ async function loadFromFile(): Promise<boolean> {
   if (data) {
     applySnapshot(data);
     syncLogLevel(data.settings?.logLevel);
-    console.log("[Persistence] ✅ Loaded from disk");
+    logger.info("配置从磁盘加载");
     return true;
   }
   return false;
@@ -228,6 +229,7 @@ async function loadDefaults() {
     records: [],
   };
   applySnapshot(data);
+  logger.info("默认配置已加载");
 }
 
 async function loadPersisted() {

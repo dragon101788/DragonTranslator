@@ -323,6 +323,7 @@ pub fn run() {
             let logs = paths::logs_dir();
             let _ = std::fs::create_dir_all(&logs);
             logger::init_logs(&logs.to_string_lossy());
+            logger::log(1, "app", &format!("App started, logs at {}", logs.display()));
 
             // Seed config.json from default-config.json on first run
             let app_root = paths::app_dir();
