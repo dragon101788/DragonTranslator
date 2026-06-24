@@ -51,7 +51,7 @@ if (-not $buildScript) {
     exit 1
 }
 Write-Host "Building release via $($buildScript.Name)..."
-cmd /c "cd /d `"$PSScriptRoot`" && `"$($buildScript.Name)`" silent"
+cmd /c "`"$($buildScript.FullName)`" silent"
 if ($LASTEXITCODE -ne 0) {
     Write-Host "ERROR: Build failed"
     exit 1
