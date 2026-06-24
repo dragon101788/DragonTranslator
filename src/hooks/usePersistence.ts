@@ -42,21 +42,32 @@ function getSnapshot(): PersistedData {
 }
 
 function applySnapshot(data: PersistedData) {
-  if (data.agents) {
+  if (data.agents && data.agents.length > 0) {
+    // Guard: default-config.json doesn't have activeAgentId,
+    // so a seeded config would overwrite the Zustand default with undefined.
+    const activeAgentId =
+      data.activeAgentId != null
+        ? data.activeAgentId
+        : data.agents[0].id;
     useAgentStore.setState({
       agents: data.agents,
-      // Only override activeAgentId if explicitly present, otherwise keep store default
-      ...(data.activeAgentId !== undefined && data.activeAgentId !== null
-        ? { activeAgentId: data.activeAgentId }
-        : {}),
+      activeAgentId,
     });
   }
-  if (data.providers) {
+  if (data.providers && data.providers.length > 0) {
+    // Same guard for activeProviderId
+    const activeProviderId =
+      data.activeProviderId != null
+        ? data.activeProviderId
+        : data.providers[0].id;
     useConfigStore.setState({
       providers: data.providers,
-      ...(data.activeProviderId !== undefined && data.activeProviderId !== null
-        ? { activeProviderId: data.activeProviderId }
-        : {}),
+      activeProviderId,
+    });
+  } else if (data.providers) {
+    // providers array exists but is empty — still update the list
+    useConfigStore.setState({
+      providers: data.providers,
     });
   }
   if (data.settings) {
