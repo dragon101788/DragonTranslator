@@ -37,7 +37,7 @@
     {
       "label": "⬆️ 提交至 GitHub",
       "type": "shell",
-      "command": "cmd /c \"git add -A && git commit -m '${input:commitMessage}' && git push origin master\"",
+      "command": "git add -A; git commit -m '${input:commitMessage}'; git push origin master",
       "options": { "cwd": "${workspaceFolder}" },
       "problemMatcher": [],
       "detail": "stage 所有变更 → commit → push"
@@ -45,7 +45,7 @@
     {
       "label": "🏷️ 发布 Release",
       "type": "shell",
-      "command": "cmd /c \"git tag -a ${input:tagVersion} -m '${input:tagVersion}' && git push origin ${input:tagVersion}\"",
+      "command": "git tag -a ${input:tagVersion} -m '${input:tagVersion}'; git push origin ${input:tagVersion}",
       "options": { "cwd": "${workspaceFolder}" },
       "problemMatcher": [],
       "detail": "打 Tag → push → 在 GitHub 上创建 Release"
