@@ -85,11 +85,33 @@ fn find_voice(lang: &str, preferred_voice: Option<&str>) -> Result<(String, u32)
         if voices.is_empty() {
             return Err("No voices installed. Please download a voice model.".to_string());
         }
-        let target = voices.iter().find(|v| v.lang == "zh_CN")
-            .unwrap_or(&voices[0]);
+        let zh_voice = voices.iter().find(|v| v.lang == "zh_CN");
+        let target = zh_voice.unwrap_or(&voices[0]);
         let model_path = format!("{}\\{}.onnx", voices_dir, target.name);
         let sample_rate = target.sample_rate;
-        println!("[TTS] find_voice: auto -> {} @ {}Hz", model_path, sample_rate);
+        let how = if zh_voice.is_some() { "zh_CN match" } else { "FALLBACK to first voice" };
+        println!("[TTS] find_voice: auto -> {} ({}) @ {}Hz", target.name, how, sample_rate);
+        crate::logger::log(
+            1, "tts",
+            &format!(
+                "find_voice auto: {} voices, selected=\"{}\" ({}), {}Hz",
+                voices.len(),
+                target.name,
+                target.lang,
+                sample_rate
+            )
+        );
+        if zh_voice.is_none() {
+            crate::logger::log(
+                3, "tts",
+                &format!(
+                    "WARNING: zh_CN voice not found, fell back to {} ({}). Available: {:?}",
+                    target.name,
+                    target.lang,
+                    voices.iter().map(|v| format!("{}({})", v.name, v.lang)).collect::<Vec<_>>()
+                )
+            );
+        }
         return Ok((model_path, sample_rate));
     }
 

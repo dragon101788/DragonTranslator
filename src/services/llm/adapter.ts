@@ -4,6 +4,7 @@ import type {
   ChatCompletionResponse,
   LLMError,
 } from "./types";
+import { logger } from "../logger";
 
 export class LLMAdapter {
   private provider: LLMProvider;
@@ -33,13 +34,18 @@ export class LLMAdapter {
   ): Promise<{ content: string; usage: ChatCompletionResponse["usage"] }> {
     const endpoint = this.getEndpoint();
 
+    const body = JSON.stringify({ ...request, stream: false });
+    logger.debug(
+      `[LLM] chat → ${request.model}\n` +
+        `  system: ${request.messages.find((m) => m.role === "system")?.content?.slice(0, 300) || "(none)"}\n` +
+        `  user:   ${request.messages.find((m) => m.role === "user")?.content?.slice(0, 300) || "(none)"}\n` +
+        `  temp: ${request.temperature}  max_tokens: ${request.max_tokens}`
+    );
+
     const response = await fetch(endpoint, {
       method: "POST",
       headers: this.getHeaders(),
-      body: JSON.stringify({
-        ...request,
-        stream: false,
-      }),
+      body,
     });
 
     if (!response.ok) {
@@ -77,6 +83,13 @@ export class LLMAdapter {
     signal?: AbortSignal
   ): Promise<{ usage: ChatCompletionResponse["usage"] }> {
     const endpoint = this.getEndpoint();
+
+    logger.debug(
+      `[LLM] chatStream → ${request.model}\n` +
+        `  system: ${request.messages.find((m) => m.role === "system")?.content?.slice(0, 300) || "(none)"}\n` +
+        `  user:   ${request.messages.find((m) => m.role === "user")?.content?.slice(0, 300) || "(none)"}\n` +
+        `  temp: ${request.temperature}  max_tokens: ${request.max_tokens}`
+    );
 
     const response = await fetch(endpoint, {
       method: "POST",

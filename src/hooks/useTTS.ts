@@ -23,6 +23,17 @@ export interface TtsState {
 
 const TAG = "[TTS-FE]";
 
+/** Detect text language (simple heuristic: check for CJK characters) */
+function detectTextLang(text: string): string {
+  // If text contains mostly CJK characters, it's likely Chinese
+  const cjkCount = (text.match(/[一-鿿㐀-䶿]/g) || []).length;
+  if (cjkCount > text.length * 0.3) return "zh";
+  // If mostly ASCII, it's likely English
+  const asciiCount = (text.match(/[a-zA-Z]/g) || []).length;
+  if (asciiCount > text.length * 0.5) return "en";
+  return "auto";
+}
+
 export function useTTS() {
   const speakingRef = useRef(false);
   const [state, setState] = useState<TtsState>({ isSpeaking: false, error: null });
@@ -34,12 +45,21 @@ export function useTTS() {
       const clean = text.replace(/<[^>]*>/g, "");
       const isTauri = isTauriEnv();
 
+      // Auto-detect language if not explicitly provided
+      const effectiveLang = lang || detectTextLang(clean);
+      const voice = useConfigStore.getState().settings.ttsVoice?.[effectiveLang] || null;
+
       console.log(TAG, "speak() called", {
         lang: lang || "(auto)",
+        effectiveLang,
         textLen: clean.length,
         isTauri,
-        preview: clean.slice(0, 30) + (clean.length > 30 ? "..." : ""),
+        voiceOverride: voice || "(none)",
+        preview: clean.slice(0, 60) + (clean.length > 60 ? "..." : ""),
       });
+      logger.info(
+        `TTS speak: effectiveLang="${effectiveLang}" voice="${voice || "auto"}" text_len=${clean.length} preview="${clean.slice(0, 40)}"`
+      );
 
       if (isTauri) {
         // ---- Piper via Tauri invoke ----
@@ -48,36 +68,36 @@ export function useTTS() {
           setState({ isSpeaking: true, error: null });
 
           const startTime = performance.now();
-          console.log(TAG, "invoking tts_speak...");
+          console.log(TAG, `invoking tts_speak lang="${effectiveLang}" voice="${voice || "auto"}"`);
+          logger.debug(`TTS invoking tts_speak lang="${effectiveLang}" voice="${voice || "auto"}"`);
           const { invoke } = await import("@tauri-apps/api/core");
-          const voice = useConfigStore.getState().settings.ttsVoice?.[lang || ""] || null;
-          console.log(TAG, `voice override: ${voice || "(auto)"}`);
           await invoke("tts_speak", {
             text: clean,
-            lang: lang || "",
+            lang: effectiveLang,
             voice,
           });
           const elapsed = (performance.now() - startTime).toFixed(0);
 
           console.log(TAG, `tts_speak OK (${elapsed}ms)`);
+          logger.info(`TTS speak OK (${elapsed}ms) lang="${effectiveLang}"`);
           speakingRef.current = false;
           setState({ isSpeaking: false, error: null });
         } catch (e: any) {
           speakingRef.current = false;
           const msg = typeof e === "string" ? e : e?.message || String(e);
           console.error(TAG, "tts_speak FAILED:", msg);
-          logger.error(`tts_speak failed (lang=${lang}): ${msg}`);
+          logger.error(`tts_speak failed (lang=${effectiveLang}): ${msg}`);
           setState({ isSpeaking: false, error: msg });
 
           // Fallback to Web Speech API on error
           console.warn(TAG, "falling back to Web Speech API...");
-          logger.warn(`falling back to Web Speech API for lang=${lang}`);
-          tryWebSpeech(clean, lang, speakingRef, setState);
+          logger.warn(`falling back to Web Speech API for lang=${effectiveLang}`);
+          tryWebSpeech(clean, effectiveLang, speakingRef, setState);
         }
       } else {
         // ---- Browser mode: Web Speech API ----
         console.log(TAG, "browser mode, using Web Speech API");
-        tryWebSpeech(clean, lang, speakingRef, setState);
+        tryWebSpeech(clean, effectiveLang, speakingRef, setState);
       }
     },
     []
