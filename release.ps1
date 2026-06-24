@@ -6,6 +6,15 @@ param(
 $cargo = "src-tauri\Cargo.toml"
 $tauri = "src-tauri\tauri.conf.json"
 
+# 0. Check gh auth (needed to create GitHub Release + upload ZIP)
+gh auth status 2>&1 | Out-Null
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "gh not authenticated. Starting login..."
+    gh auth login --hostname github.com --web
+    Write-Host "Login complete. Run Release task again to publish."
+    exit 0
+}
+
 # 1. Fetch latest tags from remote and find highest version
 Write-Host "Fetching remote tags..."
 cmd /c "git fetch --tags 2>nul"
