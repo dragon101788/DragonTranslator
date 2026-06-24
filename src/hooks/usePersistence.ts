@@ -42,16 +42,23 @@ function getSnapshot(): PersistedData {
 }
 
 function applySnapshot(data: PersistedData) {
-  if (data.agents)
+  if (data.agents) {
     useAgentStore.setState({
       agents: data.agents,
-      activeAgentId: data.activeAgentId,
+      // Only override activeAgentId if explicitly present, otherwise keep store default
+      ...(data.activeAgentId !== undefined && data.activeAgentId !== null
+        ? { activeAgentId: data.activeAgentId }
+        : {}),
     });
-  if (data.providers)
+  }
+  if (data.providers) {
     useConfigStore.setState({
       providers: data.providers,
-      activeProviderId: data.activeProviderId,
+      ...(data.activeProviderId !== undefined && data.activeProviderId !== null
+        ? { activeProviderId: data.activeProviderId }
+        : {}),
     });
+  }
   if (data.settings) {
     // Merge saved settings with defaults so new fields (e.g. ttsRate)
     // don't remain undefined on old configs.
