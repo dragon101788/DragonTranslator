@@ -1,40 +1,61 @@
 {
   "version": "2.0.0",
+  "inputs": [
+    {
+      "id": "tagVersion",
+      "type": "promptString",
+      "description": "版本号 (如 v0.6.0)",
+      "default": "v0.6.0"
+    },
+    {
+      "id": "commitMessage",
+      "type": "promptString",
+      "description": "Commit 信息",
+      "default": "update"
+    }
+  ],
   "tasks": [
     {
       "label": "🛠 启动开发",
       "type": "shell",
       "command": "${workspaceFolder}\\运行.bat",
-      "options": {
-        "cwd": "${workspaceFolder}"
-      },
+      "options": { "cwd": "${workspaceFolder}" },
       "problemMatcher": ["$rustc"],
-      "group": {
-        "kind": "build",
-        "isDefault": true
-      },
+      "group": { "kind": "build", "isDefault": true },
       "isBackground": true,
-      "detail": "双击 dev.bat 启动开发模式，默认 Ctrl+Shift+B"
+      "detail": "启动 Tauri 开发模式 (Ctrl+Shift+B)"
     },
     {
-      "label": "📦 打包便携 EXE",
+      "label": "📦 打包发布 ZIP",
       "type": "shell",
       "command": "${workspaceFolder}\\打包.bat",
-      "options": {
-        "cwd": "${workspaceFolder}"
-      },
+      "options": { "cwd": "${workspaceFolder}" },
       "problemMatcher": ["$rustc"],
       "group": "build",
-      "detail": "运行 打包.bat（编译 → 复制 exe 到根目录）"
+      "detail": "编译 + 打包 runtime 目录为 DragonTranslator.zip"
+    },
+    {
+      "label": "⬆️ 提交至 GitHub",
+      "type": "shell",
+      "command": "git add -A && git commit -m '${input:commitMessage}' && git push origin master",
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": [],
+      "detail": "stage 所有变更 → commit → push"
+    },
+    {
+      "label": "🏷️ 发布 Release",
+      "type": "shell",
+      "command": "git tag -a ${input:tagVersion} -m '${input:tagVersion}' && git push origin ${input:tagVersion}",
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": [],
+      "detail": "打 Tag → push → 在 GitHub 上创建 Release"
     },
     {
       "label": "📂 打开输出目录",
       "type": "shell",
       "command": "explorer",
       "args": ["${workspaceFolder}\\src-tauri\\target\\release"],
-      "options": {
-        "cwd": "${workspaceFolder}"
-      },
+      "options": { "cwd": "${workspaceFolder}" },
       "problemMatcher": [],
       "detail": "打开 release 输出目录"
     }

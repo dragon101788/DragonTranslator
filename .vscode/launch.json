@@ -5,7 +5,7 @@
       "type": "cppvsdbg",
       "request": "launch",
       "name": "🐛 Debug Tauri (Rust)",
-      "program": "${workspaceFolder}/src-tauri/target/debug/app.exe",
+      "program": "${workspaceFolder}/src-tauri/target/debug/龙腾翻译.exe",
       "args": [],
       "cwd": "${workspaceFolder}/src-tauri",
       "stopAtEntry": false,
