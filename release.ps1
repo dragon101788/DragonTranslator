@@ -3,13 +3,12 @@ param(
     [string]$Bump = "patch"
 )
 
-$ErrorActionPreference = "Stop"
 $cargo = "src-tauri\Cargo.toml"
 $tauri = "src-tauri\tauri.conf.json"
 
 # 1. Fetch latest tags from remote and find highest version
 Write-Host "Fetching remote tags..."
-git fetch --tags 2>&1 | Out-Null
+cmd /c "git fetch --tags 2>nul"
 $latest = git tag -l "v*" | ForEach-Object { $_ -replace '^v', '' } | Sort-Object { [Version]$_ } | Select-Object -Last 1
 if (-not $latest) {
     Write-Host "ERROR: No existing version tags found on remote"
