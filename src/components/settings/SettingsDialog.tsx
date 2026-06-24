@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
-import { Download, Upload, Globe, Keyboard, Palette, Database, Volume2, FolderOpen, Cpu } from "lucide-react";
+import { Download, Upload, Globe, Keyboard, Palette, Database, Volume2, FolderOpen, Cpu, Bug } from "lucide-react";
 import ApiConfig from "./ApiConfig";
 import ShortcutTab from "./ShortcutTab";
 import LocalModelTab from "./LocalModelTab";
 import TTSTab from "./TTSTab";
+import DebugTab from "./DebugTab";
 import { useConfigStore } from "../../stores/configStore";
 import { useAgentStore } from "../../stores/agentStore";
 import { useHistoryStore } from "../../stores/historyStore";
@@ -12,7 +13,7 @@ interface SettingsDialogProps {
   onClose: () => void;
 }
 
-type SettingsTab = "api" | "webdav" | "localModel" | "shortcut" | "appearance" | "tts";
+type SettingsTab = "api" | "webdav" | "localModel" | "shortcut" | "appearance" | "tts" | "debug";
 
 const TABS: { key: SettingsTab; label: string; icon: React.ReactNode }[] = [
   { key: "api", label: "API 配置", icon: <Globe size={16} /> },
@@ -21,6 +22,7 @@ const TABS: { key: SettingsTab; label: string; icon: React.ReactNode }[] = [
   { key: "shortcut", label: "快捷键", icon: <Keyboard size={16} /> },
   { key: "appearance", label: "外观", icon: <Palette size={16} /> },
   { key: "tts", label: "语音", icon: <Volume2 size={16} /> },
+  { key: "debug", label: "调试", icon: <Bug size={16} /> },
 ];
 
 export default function SettingsDialog({ onClose }: SettingsDialogProps) {
@@ -368,6 +370,7 @@ export default function SettingsDialog({ onClose }: SettingsDialogProps) {
             )}
 
             {tab === "tts" && <TTSTab />}
+            {tab === "debug" && <DebugTab />}
           </div>
         </div>
 

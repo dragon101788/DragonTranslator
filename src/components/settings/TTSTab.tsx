@@ -345,35 +345,6 @@ export default function TTSTab() {
             <FolderOpen size={13} />
             <span>打开语音模型目录 ({voicesDir || "./piper-voices/"})</span>
           </button>
-          {/* Log level */}
-          <div className="border-t border-lexi-border mt-3 pt-3">
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-lexi-text">日志级别</span>
-              <select
-                value={settings.logLevel || "info"}
-                onChange={async (e) => {
-                  const level = e.target.value as "debug" | "info" | "warn" | "error";
-                  updateSettings({ logLevel: level });
-                  if (isTauri) {
-                    const lvlMap: Record<string, number> = { debug: 0, info: 1, warn: 2, error: 3 };
-                    try {
-                      const { invoke } = await import("@tauri-apps/api/core");
-                      await invoke("set_log_level", { level: lvlMap[level] });
-                    } catch {}
-                  }
-                }}
-                className="bg-lexi-input text-lexi-text border border-lexi-border rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-lexi-accent"
-              >
-                <option value="debug">调试 (DEBUG)</option>
-                <option value="info">信息 (INFO)</option>
-                <option value="warn">警告 (WARN)</option>
-                <option value="error">错误 (ERROR)</option>
-              </select>
-            </div>
-            <p className="text-[10px] text-lexi-text-muted/50 mt-1">
-              日志文件: logs/frontend.log, logs/tts.log, logs/llama.log, logs/piper.log
-            </p>
-          </div>
         </div>
       )}
     </div>
