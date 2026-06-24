@@ -7,19 +7,25 @@ $ErrorActionPreference = "Stop"
 $cargo = "src-tauri\Cargo.toml"
 $tauri = "src-tauri\tauri.conf.json"
 
-# 1. Read current version
-$cur = (Select-String -Path $cargo -Pattern '^version\s*=\s*"(.*)"').Matches.Groups[1].Value
-Write-Host "Current version: $cur"
+# 1. Fetch latest tags from remote and find highest version
+Write-Host "Fetching remote tags..."
+git fetch --tags 2>&1 | Out-Null
+$latest = git tag -l "v*" | ForEach-Object { $_ -replace '^v', '' } | Sort-Object { [Version]$_ } | Select-Object -Last 1
+if (-not $latest) {
+    Write-Host "ERROR: No existing version tags found on remote"
+    exit 1
+}
+Write-Host "Latest remote version: $latest"
 
-# 2. Bump
-$v = $cur -split '\.'
+# 2. Bump from remote version
+$v = $latest -split '\.'
 switch ($Bump) {
     "major" { $v[0] = [int]$v[0] + 1; $v[1] = 0; $v[2] = 0 }
     "minor" { $v[1] = [int]$v[1] + 1; $v[2] = 0 }
     "patch" { $v[2] = [int]$v[2] + 1 }
 }
 $new = "$($v[0]).$($v[1]).$($v[2])"
-Write-Host "New version: $new"
+Write-Host "New version: $new (bump $Bump from $latest)"
 
 # 3. Write version to Cargo.toml and tauri.conf.json
 # (?m) = multiline mode so ^ matches line start (only package-level version, not dep versions)
