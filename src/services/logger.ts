@@ -2,7 +2,9 @@
  * Write a log line to logs/frontend.log via Tauri backend.
  * Falls back to console.log in browser mode.
  */
-export async function log(level: "info" | "warn" | "error", message: string) {
+export type LogLevel = "debug" | "info" | "warn" | "error";
+
+export async function log(level: LogLevel, message: string) {
   const line = `${new Date().toISOString()} [${level.toUpperCase()}] ${message}`;
   console.log("[Log]", line);
 
@@ -11,12 +13,13 @@ export async function log(level: "info" | "warn" | "error", message: string) {
       const { invoke } = await import("@tauri-apps/api/core");
       await invoke("log_frontend", { level, message });
     } catch {
-      // silent — don't cause log loops
+      // silent
     }
   }
 }
 
 export const logger = {
+  debug: (msg: string) => log("debug", msg),
   info: (msg: string) => log("info", msg),
   warn: (msg: string) => log("warn", msg),
   error: (msg: string) => log("error", msg),

@@ -85,11 +85,21 @@ async function getStore(): Promise<Store> {
   return _storePromise;
 }
 
+async function syncLogLevel(level?: string) {
+  if (!isTauriEnv() || !level) return;
+  try {
+    const lvlMap: Record<string, number> = { debug: 0, info: 1, warn: 2, error: 3 };
+    const { invoke } = await import("@tauri-apps/api/core");
+    await invoke("set_log_level", { level: lvlMap[level] ?? 1 });
+  } catch {}
+}
+
 async function loadFromFile(): Promise<boolean> {
   const store = await getStore();
   const data = await store.get<PersistedData>("app");
   if (data) {
     applySnapshot(data);
+    syncLogLevel(data.settings?.logLevel);
     console.log("[Persistence] ✅ Loaded from disk");
     return true;
   }

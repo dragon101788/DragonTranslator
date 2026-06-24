@@ -207,9 +207,16 @@ fn get_default_config() -> Result<String, String> {
 /// Append a line to logs/frontend.log
 #[tauri::command]
 fn log_frontend(level: String, message: String) {
-    let dir = paths::logs_dir();
-    let _ = std::fs::create_dir_all(&dir);
-    logger::write_raw("frontend", &format!("[{}] {}", level, message));
+    let lvl = match level.as_str() {
+        "debug" => 0, "info" => 1, "warn" => 2, "error" => 3, _ => 1,
+    };
+    logger::log(lvl, "frontend", &message);
+}
+
+/// Set global log level (0=DEBUG, 1=INFO, 2=WARN, 3=ERROR, 4=OFF)
+#[tauri::command]
+fn set_log_level(level: u8) {
+    logger::set_level(level);
 }
 
 /// Open the app directory in File Explorer.
@@ -394,6 +401,7 @@ pub fn run() {
             tts::tts_download_voice,
             tts::tts_delete_voice,
             log_frontend,
+            set_log_level,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")

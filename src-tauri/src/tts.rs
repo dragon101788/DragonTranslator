@@ -223,6 +223,7 @@ fn list_available_voices() -> Vec<VoiceInfo> {
 pub fn tts_speak(text: String, lang: String, voice: Option<String>) -> Result<(), String> {
     println!("[TTS] ========================================");
     println!("[TTS] tts_speak START lang={} text_len={}", lang, text.len());
+    crate::logger::log(1, "tts", &format!("speak START lang={} len={}", lang, text.len()));
     let preview: String = text.chars().take(50).collect();
     println!("[TTS] text preview: {}", preview);
 
@@ -381,6 +382,7 @@ pub fn tts_speak(text: String, lang: String, voice: Option<String>) -> Result<()
     drop(_stream);
 
     if let Ok(mut guard) = CANCEL.lock() { *guard = None; }
+    crate::logger::log(1, "tts", &format!("playback DONE {}ms", duration_ms));
     println!("[TTS] playback DONE ({}ms duration)", duration_ms);
     println!("[TTS] ========================================");
     Ok(())
