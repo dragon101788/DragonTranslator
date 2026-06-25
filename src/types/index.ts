@@ -6,6 +6,7 @@ export interface TranslationAgent {
   description: string;
   systemPrompt: string;
   config: AgentConfig;
+  useBergamot?: boolean; // 快速翻译模式，走 Bergamot 离线引擎
   createdAt: number;
   updatedAt: number;
 }

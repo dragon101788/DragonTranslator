@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>Bergamot 离线翻译测试</title>
+<style>
+body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; max-width: 800px; margin: 40px auto; padding: 0 20px; background: #f5f5f5; }
+h1 { color: #333; }
+.section { background: #fff; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+label { display: block; margin-bottom: 8px; font-weight: 600; color: #555; }
+textarea, select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; box-sizing: border-box; }
+textarea { min-height: 100px; resize: vertical; }
+button { background: #4a90d9; color: white; border: none; padding: 10px 24px; border-radius: 6px; cursor: pointer; font-size: 14px; margin-top: 8px; }
+button:disabled { background: #ccc; }
+button:hover:not(:disabled) { background: #357abd; }
+#output, #status { margin-top: 12px; padding: 12px; border-radius: 6px; }
+#output { background: #f0f8ff; border: 1px solid #b8d4f0; color: #333; white-space: pre-wrap; }
+#status { font-size: 13px; color: #888; background: #fafafa; border: 1px solid #eee; display: none; }
+#status.running { display: block; color: #4a90d9; }
+#status.error { display: block; color: #d9534f; background: #fdf0ef; border-color: #e6b3b3; }
+#status.ok { display: block; color: #5cb85c; background: #f0faf0; border-color: #b3e6b3; }
+.test-cases { margin: 12px 0; }
+.test-cases button { background: #f0f0f0; color: #333; border: 1px solid #ccc; margin: 4px; padding: 6px 12px; font-size: 12px; }
+.test-cases button:hover { background: #e0e0e0; }
+</style>
+</head>
+<body>
+<h1>🧪 Bergamot 离线翻译测试</h1>
+<div class="section">
+  <div id="status">正在加载 Bergamot WASM 引擎...</div>
+  <label for="direction">翻译方向</label>
+  <select id="direction">
+    <option value="enzh">英语 → 中文</option>
+    <option value="zhen">中文 → 英语</option>
+  </select>
+  <label for="input">输入文本</label>
+  <textarea id="input" placeholder="输入要翻译的文本...">What time is the meeting tomorrow?</textarea>
+  <div class="test-cases">
+    <strong>快速测试：</strong>
+    <button onclick="setTestCase(0)">日常对话</button>
+    <button onclick="setTestCase(1)">技术内容</button>
+    <button onclick="setTestCase(2)">长难句</button>
+    <button onclick="setTestCase(3)">中译英</button>
+  </div>
+  <button id="translateBtn" disabled onclick="translateText()">翻译</button>
+  <div id="output"></div>
+</div>
+
+<script>
+// ============ 测试用例 ============
+const testCases = [
+  // en→zh test cases
+  ["What time is the meeting tomorrow?", "The system requires 16GB of RAM to run efficiently.",
+   "Despite the challenges posed by the rapidly changing market conditions, the company managed to maintain its competitive edge through innovative product development and strategic partnerships.",
+   "虽然项目初期遇到了一些困难，但在团队的努力下，我们最终按时交付了产品。"],
+  // zh→en test cases
+  ["今天天气真不错，我们去公园散步吧。", "这个算法的时间复杂度是O(n log n)，在数据量较大时表现优异。",
+   "尽管市场竞争日益激烈，但公司通过持续创新和优质服务，依然保持了领先地位。",
+   "虽然项目初期遇到了一些困难，但在团队的努力下，我们最终按时交付了产品。"]
+];
+
+function setTestCase(index) {
+  const dir = document.getElementById('direction').value;
+  const isEnZh = dir === 'enzh';
+  document.getElementById('input').value = isEnZh ? testCases[0][index] : testCases[1][index];
+}
+
+// ============ Bergamot WASM 加载 ============
+const MODEL_DIR = './';
+const WASM_FILE = 'bergamot-translator.wasm';
+
+let bergamotReady = false;
+let service = null;
+let models = { enzh: null, zhen: null };
+
+async function loadModel(direction) {
+  const prefix = direction === 'enzh' ? 'enzh' : 'zhen';
+  const modelSuffix = direction === 'enzh' ? 'enzh' : 'zhen';
+
+  // 文件路径
+  const modelFile = `${prefix}/model.${modelSuffix}.intgemm.alphas.bin`;
+  const lexFile = `${prefix}/lex.50.50.${modelSuffix}.s2t.bin`;
+  const vocabFile = direction === 'enzh' ? `${prefix}/vocab.enzh.spm` : `${prefix}/vocab.zhen.spm`;
+
+  // 使用 fetch 加载
+  const [modelResp, lexResp, vocabResp] = await Promise.all([
+    fetch(modelFile),
+    fetch(lexFile),
+    fetch(vocabFile)
+  ]);
+
+  const [modelBuf, lexBuf, vocabBuf] = await Promise.all([
+    modelResp.arrayBuffer(),
+    lexResp.arrayBuffer(),
+    vocabResp.arrayBuffer()
+  ]);
+
+  // 创建 AlignedMemory (从 node-test.js 的用法)
+  const modelMem = new Module.AlignedMemory(modelBuf.byteLength, 256);
+  modelMem.getByteArrayView().set(new Int8Array(modelBuf));
+
+  const shortlistMem = new Module.AlignedMemory(lexBuf.byteLength, 64);
+  shortlistMem.getByteArrayView().set(new Int8Array(lexBuf));
+
+  const vocabMem = new Module.AlignedMemory(vocabBuf.byteLength, 64);
+  vocabMem.getByteArrayView().set(new Int8Array(vocabBuf));
+
+  // vocab list
+  const vocabs = new Module.AlignedMemoryList();
+  vocabs.push_back(vocabMem);
+
+  // config
+  const config = [
+    'beam-size: 1',
+    'normalize: 1.0',
+    'word-penalty: 0',
+    'alignment: soft',
+    'max-length-break: 128',
+    'mini-batch-words: 1024',
+    'workspace: 128',
+    'max-length-factor: 2.0',
+    'skip-cost: true',
+    'gemm-precision: int8shiftAlphaAll',
+  ].join('\n');
+
+  const model = new Module.TranslationModel(config, modelMem, shortlistMem, vocabs);
+  return model;
+}
+
+async function initBergamot() {
+  const status = document.getElementById('status');
+
+  try {
+    status.textContent = '正在加载 WASM 引擎...';
+    status.className = 'running';
+
+    // 1. 加载 WASM 二进制
+    const wasmResp = await fetch(WASM_FILE);
+    const wasmBinary = await wasmResp.arrayBuffer();
+
+    // 2. 初始化 Module
+    globalThis.Module = {
+      wasmBinary,
+      onRuntimeInitialized: async () => {
+        status.textContent = 'WASM 引擎加载成功，正在加载模型...';
+
+        try {
+          // 加载 enzh 模型
+          models.enzh = await loadModel('enzh');
+          status.textContent = '✅ en→zh 模型加载成功，正在加载 zh→en 模型...';
+
+          // 加载 zhen 模型
+          models.zhen = await loadModel('zhen');
+
+          // 创建 service
+          service = new Module.BlockingService({cacheSize: 0});
+
+          bergamotReady = true;
+          document.getElementById('translateBtn').disabled = false;
+          status.textContent = '✅ 所有模型加载完毕，准备翻译！';
+          status.className = 'ok';
+        } catch(e) {
+          status.textContent = '❌ 模型加载失败: ' + e.message;
+          status.className = 'error';
+          console.error(e);
+        }
+      }
+    };
+
+    // 3. 加载并执行 worker.js runtime
+    const workerResp = await fetch('bergamot-translator-worker.js');
+    const workerJs = await workerResp.text();
+    eval(workerJs);
+
+  } catch(e) {
+    status.textContent = '❌ 初始化失败: ' + e.message;
+    status.className = 'error';
+    console.error(e);
+  }
+}
+
+// ============ 翻译 ============
+async function translateText() {
+  if (!bergamotReady || !service) return;
+
+  const input = document.getElementById('input').value;
+  const direction = document.getElementById('direction').value;
+  const output = document.getElementById('output');
+  const status = document.getElementById('status');
+
+  if (!input.trim()) {
+    output.textContent = '请输入文本';
+    return;
+  }
+
+  const model = models[direction];
+  if (!model) {
+    output.textContent = '模型未加载';
+    return;
+  }
+
+  try {
+    status.textContent = '翻译中...';
+    status.className = 'running';
+
+    // Bergamot translate API
+    const result = service.translate(model, input);
+    // result 是一个 TranslationResult 对象或字符串
+    // 根据 API 可能是 result.text 或 result
+
+    output.textContent = typeof result === 'string' ? result :
+                         (result.text || result.target || JSON.stringify(result));
+
+    status.textContent = '✅ 翻译完成';
+    status.className = 'ok';
+  } catch(e) {
+    output.textContent = '翻译失败: ' + e.message;
+    status.className = 'error';
+    console.error(e);
+  }
+}
+
+// ============ 启动 ============
+window.onload = () => {
+  document.getElementById('status').style.display = 'block';
+  initBergamot();
+};
+</script>
+</body>
+</html>
