@@ -1,5 +1,5 @@
 import { useRef, useEffect } from "react";
-import { StopCircle, Copy, Check, Loader2, Cloud, Cpu, Volume2 } from "lucide-react";
+import { StopCircle, Copy, Check, Loader2, Cloud, Cpu, Volume2, Square } from "lucide-react";
 import type { CardStream } from "../../hooks/useMultiTranslate";
 import { useTTS } from "../../hooks/useTTS";
 
@@ -81,11 +81,17 @@ export default function OutputCard({
                 {copied ? <Check size={13} /> : <Copy size={13} />}
               </button>
               <button
-                onClick={() => tts.speak(card.result!.replace(/<[^>]*>/g, ""), "")}
+                onClick={() => {
+                  if (tts.isSpeaking) {
+                    tts.stop();
+                  } else if (card.result) {
+                    tts.speak(card.result!.replace(/<[^>]*>/g, ""), "");
+                  }
+                }}
                 className="p-1 rounded hover:bg-lexi-hover text-lexi-text-muted hover:text-lexi-text transition-colors"
-                title="朗读"
+                title={tts.isSpeaking ? "停止朗读" : "朗读"}
               >
-                <Volume2 size={13} />
+                {tts.isSpeaking ? <Square size={13} /> : <Volume2 size={13} />}
               </button>
             </>
           ) : null}

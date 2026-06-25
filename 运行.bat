@@ -14,7 +14,7 @@ echo.
 
 REM === Auto-detect and install Node.js dependencies ===
 if not exist "node_modules\" (
-    echo [1/3] Installing Node.js dependencies...
+    echo [1/2] Installing Node.js dependencies...
     call npm install
     if errorlevel 1 (
         echo ERROR: npm install failed. Check your network or proxy settings.
@@ -23,22 +23,11 @@ if not exist "node_modules\" (
     )
     echo Done.
 ) else (
-    echo [1/3] Node.js dependencies: already installed.
+    echo [1/2] Node.js dependencies: already installed.
 )
 
-REM === Auto-detect and install Rust dependencies ===
-echo [2/3] Checking Rust dependencies...
-if not exist "src-tauri\target\" (
-    echo   First run - Cargo will download and compile Rust crates.
-    echo   This may take a while...
-)
-cargo check --manifest-path src-tauri\Cargo.toml 2>nul
-if errorlevel 1 (
-    echo   Downloading missing Rust dependencies...
-    cargo fetch --manifest-path src-tauri\Cargo.toml
-)
-
-echo [3/3] Starting Tauri dev server...
+echo [2/2] Starting Tauri dev server...
+echo   Tauri will handle Rust dependency resolution automatically.
 echo.
 
 taskkill /f /im app.exe 2>nul

@@ -111,25 +111,7 @@ export default function MainPanel({
       )}
 
       {view === "translation" && (
-        <div className="flex flex-col h-full min-h-0 overflow-y-auto">
-          {/* Agent header */}
-          <div className="flex items-center gap-3 px-5 py-4 border-b border-lexi-border/50 flex-shrink-0">
-            {activeAgent && (
-              <>
-                <span className="text-2xl">{activeAgent.icon}</span>
-                <div>
-                  <h2 className="text-base font-semibold text-lexi-text">
-                    {activeAgent.name}
-                  </h2>
-                  <p className="text-xs text-lexi-text-muted">
-                    {activeAgent.description}
-                  </p>
-                </div>
-              </>
-            )}
-          </div>
-
-          
+        <div className="flex flex-col h-full min-h-0 overflow-y-auto pt-4">
 
           {/* Cards */}
           <div className="flex flex-col gap-3 px-5 py-5">

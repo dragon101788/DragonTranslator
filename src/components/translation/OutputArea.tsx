@@ -1,7 +1,7 @@
 import { useMemo, useState, useEffect, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { Copy, Check, AlertCircle, Clock, Loader2, Volume2 } from "lucide-react";
+import { Copy, Check, AlertCircle, Clock, Loader2, Volume2, Square } from "lucide-react";
 import { useTTS } from "../../hooks/useTTS";
 
 interface OutputAreaProps {
@@ -65,12 +65,18 @@ export default function OutputArea({
         )}
         {result && !translating && (
           <button
-            onClick={() => tts.speak(result.replace(/<[^>]*>/g, ""), "")}
+            onClick={() => {
+              if (tts.isSpeaking) {
+                tts.stop();
+              } else if (result) {
+                tts.speak(result.replace(/<[^>]*>/g, ""), "");
+              }
+            }}
             className="flex items-center gap-1 hover:text-lexi-text transition-colors"
-            title="朗读译文"
+            title={tts.isSpeaking ? "停止朗读" : "朗读译文"}
           >
-            <Volume2 size={12} />
-            <span>朗读</span>
+            {tts.isSpeaking ? <Square size={12} /> : <Volume2 size={12} />}
+            <span>{tts.isSpeaking ? "停止" : "朗读"}</span>
           </button>
         )}
         {result && !translating && (

@@ -192,6 +192,9 @@ function App() {
         onCloseRequest={handleCloseRequest}
         onOpenHistory={() => setView("history")}
         onOpenSettings={() => setView("settings")}
+        view={view}
+        activeAgent={useAgentStore(s => view === "translation" ? s.getActiveAgent() : null)}
+        onBack={goToTranslation}
       />
       <div className="flex flex-1 min-h-0">
         <Sidebar

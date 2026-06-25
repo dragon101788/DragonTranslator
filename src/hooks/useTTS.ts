@@ -1,4 +1,4 @@
-﻿import { useCallback, useRef, useState } from "react";
+﻿import { useCallback, useState, useEffect } from "react";
 import { useConfigStore } from "../stores/configStore";
 import { logger } from "../services/logger";
 
@@ -10,6 +10,22 @@ function isTauriEnv(): boolean {
   return (
     typeof window !== "undefined" && "__TAURI_INTERNALS__" in window
   );
+}
+
+// ---------------------------------------------------------------------------
+// Global speaking state (shared across all useTTS instances)
+// Since TTS playback is now background, we need a module-level flag so that
+// all components see the same "is-speaking" state and the per-instance
+// guard prevents concurrent calls.
+// ---------------------------------------------------------------------------
+
+let globalSpeaking = false;
+const subscribers = new Set<() => void>();
+let ttsEventListening = false;
+
+function setGlobalSpeaking(v: boolean) {
+  globalSpeaking = v;
+  subscribers.forEach((fn) => fn());
 }
 
 // ---------------------------------------------------------------------------
@@ -35,12 +51,43 @@ function detectTextLang(text: string): string {
 }
 
 export function useTTS() {
-  const speakingRef = useRef(false);
+  const [localIsSpeaking, setLocalIsSpeaking] = useState(globalSpeaking);
   const [state, setState] = useState<TtsState>({ isSpeaking: false, error: null });
+
+  // Subscribe to global speaking state
+  useEffect(() => {
+    const fn = () => setLocalIsSpeaking(globalSpeaking);
+    subscribers.add(fn);
+    return () => {
+      subscribers.delete(fn);
+    };
+  }, []);
+
+  // Singleton listener for tts_complete event from Rust backend
+  useEffect(() => {
+    if (!isTauriEnv() || ttsEventListening) return;
+    ttsEventListening = true;
+
+    let unlisten: (() => void) | undefined;
+    import("@tauri-apps/api/event").then(({ listen }) => {
+      listen("tts_complete", () => {
+        console.log(TAG, "tts_complete event received");
+        setGlobalSpeaking(false);
+        setState({ isSpeaking: false, error: null });
+      }).then((fn) => {
+        unlisten = fn;
+      });
+    });
+
+    return () => {
+      unlisten?.();
+      ttsEventListening = false;
+    };
+  }, []);
 
   const speak = useCallback(
     async (text: string, lang?: string) => {
-      if (!text || speakingRef.current) return;
+      if (!text || globalSpeaking) return;
 
       const clean = text.replace(/<[^>]*>/g, "");
       const isTauri = isTauriEnv();
@@ -62,12 +109,11 @@ export function useTTS() {
       );
 
       if (isTauri) {
-        // ---- Piper via Tauri invoke ----
+        // ---- Piper via Tauri invoke (non-blocking, returns immediately) ----
         try {
-          speakingRef.current = true;
+          setGlobalSpeaking(true);
           setState({ isSpeaking: true, error: null });
 
-          const startTime = performance.now();
           console.log(TAG, `invoking tts_speak lang="${effectiveLang}" voice="${voice || "auto"}"`);
           logger.info(`TTS invoking tts_speak lang="${effectiveLang}" voice="${voice || "auto"}"`);
           const { invoke } = await import("@tauri-apps/api/core");
@@ -76,14 +122,10 @@ export function useTTS() {
             lang: effectiveLang,
             voice,
           });
-          const elapsed = (performance.now() - startTime).toFixed(0);
-
-          console.log(TAG, `tts_speak OK (${elapsed}ms)`);
-          logger.info(`TTS speak OK (${elapsed}ms) lang="${effectiveLang}"`);
-          speakingRef.current = false;
-          setState({ isSpeaking: false, error: null });
+          // invoke returns immediately now (background playback)
+          console.log(TAG, "tts_speak dispatched (background playback)");
         } catch (e: any) {
-          speakingRef.current = false;
+          setGlobalSpeaking(false);
           const msg = typeof e === "string" ? e : e?.message || String(e);
           console.error(TAG, "tts_speak FAILED:", msg);
           logger.error(`tts_speak failed (lang=${effectiveLang}): ${msg}`);
@@ -92,12 +134,12 @@ export function useTTS() {
           // Fallback to Web Speech API on error
           console.warn(TAG, "falling back to Web Speech API...");
           logger.warn(`falling back to Web Speech API for lang=${effectiveLang}`);
-          tryWebSpeech(clean, effectiveLang, speakingRef, setState);
+          tryWebSpeech(clean, effectiveLang, setGlobalSpeaking, setState);
         }
       } else {
         // ---- Browser mode: Web Speech API ----
         console.log(TAG, "browser mode, using Web Speech API");
-        tryWebSpeech(clean, effectiveLang, speakingRef, setState);
+        tryWebSpeech(clean, effectiveLang, setGlobalSpeaking, setState);
       }
     },
     []
@@ -105,7 +147,7 @@ export function useTTS() {
 
   const stop = useCallback(async () => {
     console.log(TAG, "stop() called");
-    speakingRef.current = false;
+    setGlobalSpeaking(false);
 
     if (isTauriEnv()) {
       try {
@@ -121,7 +163,7 @@ export function useTTS() {
     setState({ isSpeaking: false, error: null });
   }, []);
 
-  return { speak, stop, isSpeaking: state.isSpeaking, error: state.error };
+  return { speak, stop, isSpeaking: localIsSpeaking, error: state.error };
 }
 
 // ---------------------------------------------------------------------------
@@ -131,7 +173,7 @@ export function useTTS() {
 function tryWebSpeech(
   text: string,
   lang: string | undefined,
-  speakingRef: React.MutableRefObject<boolean>,
+  setGlobalSpeaking: (v: boolean) => void,
   setState: (s: TtsState) => void
 ) {
   const TAG_WS = "[TTS-FE:WebSpeech]";
@@ -161,17 +203,17 @@ function tryWebSpeech(
 
   utterance.onstart = () => {
     console.log(TAG_WS, "speaking started");
-    speakingRef.current = true;
+    setGlobalSpeaking(true);
     setState({ isSpeaking: true, error: null });
   };
   utterance.onend = () => {
     console.log(TAG_WS, "speaking ended");
-    speakingRef.current = false;
+    setGlobalSpeaking(false);
     setState({ isSpeaking: false, error: null });
   };
   utterance.onerror = (e) => {
     console.error(TAG_WS, "speaking error:", e.error);
-    speakingRef.current = false;
+    setGlobalSpeaking(false);
     setState({ isSpeaking: false, error: e.error || "Speech synthesis error" });
   };
 

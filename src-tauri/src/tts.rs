@@ -8,6 +8,7 @@ use std::time::Duration;
 
 use rodio::{OutputStream, Sink};
 use serde::Deserialize;
+use tauri::Emitter;
 
 // ---------------------------------------------------------------------------
 // Cancel token for in-progress playback
@@ -242,7 +243,7 @@ fn list_available_voices() -> Vec<VoiceInfo> {
 // ---------------------------------------------------------------------------
 
 #[tauri::command]
-pub fn tts_speak(text: String, lang: String, voice: Option<String>) -> Result<(), String> {
+pub fn tts_speak(app_handle: tauri::AppHandle, text: String, lang: String, voice: Option<String>) -> Result<(), String> {
     println!("[TTS] ========================================");
     println!("[TTS] tts_speak START lang={} text_len={}", lang, text.len());
     crate::logger::log(1, "tts", &format!("speak START lang={} len={}", lang, text.len()));
@@ -259,7 +260,7 @@ pub fn tts_speak(text: String, lang: String, voice: Option<String>) -> Result<()
     tts_stop_inner();
     std::thread::sleep(Duration::from_millis(50));
 
-    // 2. Find voice
+    // 2. Find voice (synchronous validation)
     println!("[TTS] step2: finding voice for lang={}", lang);
     let (model_path, sample_rate) = find_voice(&lang, voice.as_deref())?;
 
@@ -278,134 +279,191 @@ pub fn tts_speak(text: String, lang: String, voice: Option<String>) -> Result<()
         return Err(err);
     }
 
-    println!("[TTS] step4: spawning piper (sr={}Hz)...", sample_rate);
-
-    // 3. Start piper -- capture stderr for diagnostics
-    let mut child = Command::new(&piper_exe)
-        .arg("-m")
-        .arg(&model_path)
-        .arg("--output_raw")
-        .stdin(Stdio::piped())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())   // <-- capture stderr instead of discarding
-        .creation_flags(0x08000000)
-        .spawn()
-        .map_err(|e| {
-            let err = format!("Failed to start piper: {}", e);
-            eprintln!("[TTS] ERROR: {}", err);
-            err
-        })?;
-
-    println!("[TTS] step5: writing {} bytes to piper stdin...", text.len());
-    // 4. Write text to stdin, then close (EOF triggers synthesis)
-    {
-        let mut stdin = child.stdin.take().ok_or("Cannot open piper stdin")?;
-        stdin
-            .write_all(text.as_bytes())
-            .map_err(|e| format!("Failed to write piper stdin: {}", e))?;
-    }
-    println!("[TTS] step5: stdin closed (EOF sent)");
-
-    // 5. Read all PCM from stdout
-    println!("[TTS] step6: reading PCM from piper stdout...");
-    let mut stdout = child.stdout.take().ok_or("Cannot open piper stdout")?;
-    let mut all_pcm: Vec<u8> = Vec::new();
-    stdout
-        .read_to_end(&mut all_pcm)
-        .map_err(|e| format!("Failed to read piper output: {}", e))?;
-    println!("[TTS] step6: read {} bytes of PCM", all_pcm.len());
-
-    // 6. Read stderr from piper
-    let mut stderr_output = String::new();
-    if let Some(ref mut stderr) = child.stderr {
-        stderr.read_to_string(&mut stderr_output).ok();
-        if !stderr_output.is_empty() {
-            eprintln!("[TTS] piper stderr:\n{}", stderr_output.trim());
-            crate::logger::write_raw("piper", &stderr_output);
-        }
-    }
-
-    // 7. Wait for piper
-    let status = child
-        .wait()
-        .map_err(|e| format!("Failed to wait for piper: {}", e))?;
-    let exit_code = status.code();
-    println!("[TTS] step7: piper exited with code={:?}", exit_code);
-    if !status.success() {
-        let err = format!(
-            "piper exited with error (code: {:?}) stderr: {}",
-            exit_code,
-            stderr_output.trim()
-        );
-        eprintln!("[TTS] ERROR: {}", err);
-        return Err(err);
-    }
-
-    // 8. Convert bytes -> i16 samples
-    if all_pcm.len() < 2 {
-        println!("[TTS] WARNING: PCM data too short ({} bytes), no audio", all_pcm.len());
-        return Ok(());
-    }
-    let usable = all_pcm.len() - (all_pcm.len() % 2);
-    let samples: Vec<i16> = all_pcm[..usable]
-        .chunks_exact(2)
-        .map(|c| i16::from_le_bytes([c[0], c[1]]))
-        .collect();
-
-    let duration_ms = (samples.len() as f64 / sample_rate as f64 * 1000.0) as u32;
-    println!(
-        "[TTS] step8: {} samples, {}ms, {}Hz mono i16",
-        samples.len(), duration_ms, sample_rate
-    );
-
-    // 9. Audio output
-    println!("[TTS] step9: opening audio device...");
-    let (_stream, handle) = OutputStream::try_default()
-        .map_err(|e| {
-            let err = format!("Failed to open audio device: {}", e);
-            eprintln!("[TTS] ERROR: {}", err);
-            err
-        })?;
-    let sink = Sink::try_new(&handle)
-        .map_err(|e| {
-            let err = format!("Failed to create audio sink: {}", e);
-            eprintln!("[TTS] ERROR: {}", err);
-            err
-        })?;
-
-    // 10. Cancel token
+    // 3. Set up cancel token
     let cancel = Arc::new(AtomicBool::new(false));
     {
         let mut guard = CANCEL.lock().map_err(|e| e.to_string())?;
         *guard = Some(Arc::clone(&cancel));
     }
 
-    // 11. Play
-    println!("[TTS] step10: starting playback...");
-    let source = rodio::buffer::SamplesBuffer::new(1, sample_rate, samples);
-    sink.append(source);
+    // === Spawn background thread for piper generation + audio playback ===
+    // Returns immediately so the Tauri command thread is not blocked.
+    let text_len = text.len();
+    println!("[TTS] step4: spawning background thread for playback...");
+    crate::logger::log(1, "tts", "spawning background playback thread");
 
-    while !sink.empty() {
-        if cancel.load(Ordering::Relaxed) {
-            drop(sink);
-            drop(_stream);
-            println!("[TTS] playback CANCELLED");
-            if let Ok(mut guard) = CANCEL.lock() { *guard = None; }
-            return Ok(());
+    std::thread::spawn(move || {
+        let bg_tag = "[TTS-bg]";
+        println!("{} thread started", bg_tag);
+
+        // ---- Start piper ----
+        let mut child = match Command::new(&piper_exe)
+            .arg("-m")
+            .arg(&model_path)
+            .arg("--output_raw")
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .creation_flags(0x08000000)
+            .spawn()
+        {
+            Ok(c) => c,
+            Err(e) => {
+                eprintln!("{} Failed to start piper: {}", bg_tag, e);
+                crate::logger::log(3, "tts", &format!("piper spawn failed: {}", e));
+                if let Ok(mut guard) = CANCEL.lock() { *guard = None; }
+                let _ = app_handle.emit("tts_complete", ());
+                return;
+            }
+        };
+
+        // ---- Write text to stdin ----
+        {
+            let mut stdin = match child.stdin.take() {
+                Some(s) => s,
+                None => {
+                    eprintln!("{} Cannot open piper stdin", bg_tag);
+                    if let Ok(mut guard) = CANCEL.lock() { *guard = None; }
+                    let _ = app_handle.emit("tts_complete", ());
+                    return;
+                }
+            };
+            if let Err(e) = stdin.write_all(text.as_bytes()) {
+                eprintln!("{} Failed to write piper stdin: {}", bg_tag, e);
+                if let Ok(mut guard) = CANCEL.lock() { *guard = None; }
+                let _ = app_handle.emit("tts_complete", ());
+                return;
+            }
         }
-        std::thread::sleep(Duration::from_millis(30));
-    }
+        println!("{} stdin written ({} bytes), reading PCM...", bg_tag, text_len);
 
-    // Natural completion
-    let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        sink.sleep_until_end();
-    }));
-    drop(sink);
-    drop(_stream);
+        // ---- Read PCM from stdout ----
+        let mut stdout = match child.stdout.take() {
+            Some(s) => s,
+            None => {
+                eprintln!("{} Cannot open piper stdout", bg_tag);
+                if let Ok(mut guard) = CANCEL.lock() { *guard = None; }
+                let _ = app_handle.emit("tts_complete", ());
+                return;
+            }
+        };
+        let mut all_pcm: Vec<u8> = Vec::new();
+        if let Err(e) = stdout.read_to_end(&mut all_pcm) {
+            eprintln!("{} Failed to read piper output: {}", bg_tag, e);
+            if let Ok(mut guard) = CANCEL.lock() { *guard = None; }
+            let _ = app_handle.emit("tts_complete", ());
+            return;
+        }
+        println!("{} read {} bytes of PCM", bg_tag, all_pcm.len());
 
-    if let Ok(mut guard) = CANCEL.lock() { *guard = None; }
-    crate::logger::log(1, "tts", &format!("playback DONE {}ms", duration_ms));
-    println!("[TTS] playback DONE ({}ms duration)", duration_ms);
+        // ---- Read stderr ----
+        let mut stderr_output = String::new();
+        if let Some(ref mut stderr) = child.stderr {
+            stderr.read_to_string(&mut stderr_output).ok();
+            if !stderr_output.is_empty() {
+                eprintln!("{} piper stderr:\n{}", bg_tag, stderr_output.trim());
+                crate::logger::write_raw("piper", &stderr_output);
+            }
+        }
+
+        // ---- Wait for piper ----
+        let status = match child.wait() {
+            Ok(s) => s,
+            Err(e) => {
+                eprintln!("{} Failed to wait for piper: {}", bg_tag, e);
+                if let Ok(mut guard) = CANCEL.lock() { *guard = None; }
+                let _ = app_handle.emit("tts_complete", ());
+                return;
+            }
+        };
+        let exit_code = status.code();
+        println!("{} piper exited with code={:?}", bg_tag, exit_code);
+        if !status.success() {
+            eprintln!("{} piper error (code: {:?}) stderr: {}", bg_tag, exit_code, stderr_output.trim());
+            if let Ok(mut guard) = CANCEL.lock() { *guard = None; }
+            let _ = app_handle.emit("tts_complete", ());
+            return;
+        }
+
+        // ---- Check cancel before playback ----
+        if cancel.load(Ordering::Relaxed) {
+            println!("{} cancelled before playback", bg_tag);
+            if let Ok(mut guard) = CANCEL.lock() { *guard = None; }
+            let _ = app_handle.emit("tts_complete", ());
+            return;
+        }
+
+        // ---- Convert bytes -> i16 samples ----
+        if all_pcm.len() < 2 {
+            println!("{} WARNING: PCM data too short ({} bytes), no audio", bg_tag, all_pcm.len());
+            if let Ok(mut guard) = CANCEL.lock() { *guard = None; }
+            let _ = app_handle.emit("tts_complete", ());
+            return;
+        }
+        let usable = all_pcm.len() - (all_pcm.len() % 2);
+        let samples: Vec<i16> = all_pcm[..usable]
+            .chunks_exact(2)
+            .map(|c| i16::from_le_bytes([c[0], c[1]]))
+            .collect();
+
+        let duration_ms = (samples.len() as f64 / sample_rate as f64 * 1000.0) as u32;
+        println!("{} {} samples, {}ms, {}Hz mono i16", bg_tag, samples.len(), duration_ms, sample_rate);
+
+        // ---- Audio output ----
+        let (_stream, handle) = match OutputStream::try_default() {
+            Ok(s) => s,
+            Err(e) => {
+                eprintln!("{} Failed to open audio device: {}", bg_tag, e);
+                if let Ok(mut guard) = CANCEL.lock() { *guard = None; }
+                let _ = app_handle.emit("tts_complete", ());
+                return;
+            }
+        };
+        let sink = match Sink::try_new(&handle) {
+            Ok(s) => s,
+            Err(e) => {
+                eprintln!("{} Failed to create audio sink: {}", bg_tag, e);
+                if let Ok(mut guard) = CANCEL.lock() { *guard = None; }
+                let _ = app_handle.emit("tts_complete", ());
+                return;
+            }
+        };
+
+        // ---- Play ----
+        println!("{} starting playback...", bg_tag);
+        let source = rodio::buffer::SamplesBuffer::new(1, sample_rate, samples);
+        sink.append(source);
+
+        while !sink.empty() {
+            if cancel.load(Ordering::Relaxed) {
+                drop(sink);
+                drop(_stream);
+                println!("{} playback CANCELLED", bg_tag);
+                if let Ok(mut guard) = CANCEL.lock() { *guard = None; }
+                let _ = app_handle.emit("tts_complete", ());
+                return;
+            }
+            std::thread::sleep(Duration::from_millis(30));
+        }
+
+        // Natural completion
+        let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            sink.sleep_until_end();
+        }));
+        drop(sink);
+        drop(_stream);
+
+        if let Ok(mut guard) = CANCEL.lock() { *guard = None; }
+        crate::logger::log(1, "tts", &format!("playback DONE {}ms", duration_ms));
+        println!("{} playback DONE ({}ms duration)", bg_tag, duration_ms);
+        println!("{} ========================================", bg_tag);
+
+        // Notify frontend that playback is complete
+        let _ = app_handle.emit("tts_complete", ());
+    });
+
+    // Return immediately — playback runs in background
+    println!("[TTS] background thread spawned, returning immediately");
     println!("[TTS] ========================================");
     Ok(())
 }
