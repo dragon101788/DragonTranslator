@@ -29,17 +29,14 @@ dist-ssr
 src-tauri/target/
 *.pdb
 *.exe
+!runtime/*.exe
 
 # Local portable data (contains API keys)
 dragon-translator-config.json
 config.json
 DragonTranslator.zip
 
-# Large runtime files (distributed via ZIP, not git)
-runtime/*.exe
-runtime/*.gguf
-runtime/piper/
-runtime/piper-voices/
+# Runtime files are now tracked via Git LFS
 
 # Reference binaries
 llamafile/
