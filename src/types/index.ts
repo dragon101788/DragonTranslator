@@ -73,7 +73,23 @@ export interface AppSettings {
 export interface LocalModelConfig {
   enabled: boolean;      // auto-start on launch
   port: number;          // llama.cpp API port
-  model: string;         // GGUF filename
+  activeModel: string;   // filename of active GGUF (e.g. "qwen3-0.6b-q4_k_m.gguf")
+  customModels: { name: string; url: string }[];  // user-added models
+}
+
+export interface GgufModelInfo {
+  name: string;
+  size_bytes: number;
+}
+
+export interface CuratedModel {
+  id: string;
+  name: string;
+  description: string;
+  size_mb: number;
+  repo: string;
+  filename: string;
+  url_path: string;
 }
 
 export interface BergamotConfig {
@@ -146,6 +162,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   localModel: {
     enabled: true,
     port: 5158,
-    model: "qwen3-0.6b-q4_k_m.gguf",
+    activeModel: "",
+    customModels: [],
   },
 };

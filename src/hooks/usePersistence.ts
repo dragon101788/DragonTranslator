@@ -201,7 +201,7 @@ function ensureLocalProvider(rawProviders: LLMProvider[]) {
   const settings = useConfigStore.getState().settings;
   const local = rawProviders.find((p) => p.id === "local");
   const url = `http://127.0.0.1:${settings.localModel.port}/v1`;
-  const name = `本地模型 (${settings.localModel.model.replace(".gguf", "")})`;
+  const name = `本地模型 (${settings.localModel.activeModel.replace(".gguf", "") || "未选择"})`;
   if (local) {
     return rawProviders.map((p) =>
       p.id === "local" ? { ...p, baseUrl: url, name, apiKey: "local" } : p

@@ -17,77 +17,40 @@ function isTauri() {
 function App() {
   usePersistence();
 
-  // ---- Auto-start local model (llamafile) + register provider ----
+  // ---- Auto-start local model if downloaded & activated ----
   useEffect(() => {
     if (!isTauri()) return;
     const timer = setTimeout(async () => {
       const { localModel } = useConfigStore.getState().settings;
+      if (!localModel.activeModel) return;
       if (!localModel.enabled) {
-        logger.info("本地模型已禁用, 跳过启动");
+        logger.info("本地模型已禁用, 跳过自动启动");
         return;
       }
-      logger.info(
-        `正在启动本地模型: ${localModel.model} (端口 ${localModel.port})...`
-      );
+      logger.info(`检测到已激活模型: ${localModel.activeModel}，自动启动...`);
       try {
         const { invoke } = await import("@tauri-apps/api/core");
         const msg = await invoke<string>("start_local_model", {
           port: localModel.port,
-          model: localModel.model,
+          model: localModel.activeModel,
         });
-        console.log("[LocalModel]", msg);
-        logger.info(`本地模型启动成功: ${msg}`);
+        logger.info(`本地模型自动启动成功: ${msg}`);
 
-        // Auto-register local provider
+        // Register local provider
         const localUrl = `http://127.0.0.1:${localModel.port}/v1`;
         const state = useConfigStore.getState();
         const existing = state.providers.find((p) => p.id === "local");
+        const modelName = localModel.activeModel.replace(".gguf", "");
         if (existing) {
-          state.updateProvider("local", { baseUrl: localUrl, apiKey: "local" });
+          state.updateProvider("local", { baseUrl: localUrl, apiKey: "local", name: `本地模型 (${modelName})` });
         } else {
           state.addProvider({
-            id: "local",
-            name: "本地模型 (Qwen3)",
-            baseUrl: localUrl,
-            apiKey: "local",
-            models: [],
-            isDefault: false,
-            createdAt: Date.now(),
+            id: "local", name: `本地模型 (${modelName})`,
+            baseUrl: localUrl, apiKey: "local", models: [], isDefault: false, createdAt: Date.now(),
           });
-        }
-        // Set as active if no other provider configured
-        if (state.providers.length === 1) {
-          state.setActiveProvider("local");
-        }
-
-        // Fetch model list
-        try {
-          const { LLMAdapter } = await import(
-            "./services/llm/adapter"
-          );
-          const adapter = new LLMAdapter({
-            id: "local",
-            name: "本地模型",
-            baseUrl: localUrl,
-            apiKey: "local",
-            models: [],
-            isDefault: false,
-            createdAt: Date.now(),
-          });
-          const models = await adapter.fetchModels();
-          if (models.length > 0) {
-            state.updateProvider("local", { models });
-            logger.info(`本地模型列表获取成功: ${models.length} 个模型`);
-          } else {
-            logger.warn("本地模型列表为空");
-          }
-        } catch (e: any) {
-          logger.warn(`本地模型列表获取失败 (不影响使用): ${e?.message || e}`);
         }
       } catch (e: any) {
-        const errMsg = `本地模型启动失败: ${e?.message || e}`;
-        console.error("[LocalModel]", errMsg);
-        logger.error(errMsg);
+        logger.warn(`本地模型自动启动失败: ${e?.message || e}`);
       }
     }, 1500);
     return () => clearTimeout(timer);

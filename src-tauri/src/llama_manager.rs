@@ -1,10 +1,11 @@
 use std::fs::OpenOptions;
-use std::io::Write;
+use std::io::{Read, Write};
 use std::net::TcpStream;
 use std::os::windows::process::CommandExt;
 use std::process::{Child, Command, Stdio};
 use std::sync::Mutex;
 use std::time::Duration;
+use tauri::Emitter;
 
 static LLAMA_PROCESS: Mutex<Option<Child>> = Mutex::new(None);
 
@@ -173,12 +174,13 @@ pub fn stop_local_model() -> Result<String, String> {
 }
 
 #[tauri::command]
-pub fn get_local_model_status(port: Option<u16>) -> Result<LocalModelStatus, String> {
+pub fn get_local_model_status(port: Option<u16>, model: Option<String>) -> Result<LocalModelStatus, String> {
     let port = port.unwrap_or(DEFAULT_PORT);
+    let active_model = model.unwrap_or_default();
     Ok(LocalModelStatus {
         running: is_port_open(port),
         port,
-        model: DEFAULT_MODEL.to_string(),
+        model: active_model,
         llamafile: LLAMAFILE_EXE.to_string(),
     })
 }
@@ -189,6 +191,120 @@ pub struct LocalModelStatus {
     pub port: u16,
     pub model: String,
     pub llamafile: String,
+}
+
+// ---------------------------------------------------------------------------
+// Model management (download / list / delete)
+// ---------------------------------------------------------------------------
+
+#[derive(serde::Serialize, Clone)]
+pub struct GgufModelInfo {
+    pub name: String,
+    pub size_bytes: u64,
+}
+
+#[tauri::command]
+pub fn list_downloaded_models() -> Result<Vec<GgufModelInfo>, String> {
+    let runtime = crate::paths::runtime_dir();
+    let mut models: Vec<GgufModelInfo> = Vec::new();
+    let dir = match std::fs::read_dir(&runtime) {
+        Ok(d) => d,
+        Err(_) => return Ok(models),
+    };
+    for entry in dir.flatten() {
+        let name = entry.file_name().to_string_lossy().to_string();
+        if !name.ends_with(".gguf") { continue; }
+        let path = runtime.join(&name);
+        let size_bytes = std::fs::metadata(&path).map(|m| m.len()).unwrap_or(0);
+        models.push(GgufModelInfo { name, size_bytes });
+    }
+    models.sort_by(|a, b| a.name.cmp(&b.name));
+    Ok(models)
+}
+
+#[tauri::command]
+pub fn download_model(
+    app_handle: tauri::AppHandle,
+    url: String,
+    filename: String,
+) -> Result<String, String> {
+    // Safety: only allow .gguf files
+    if !filename.ends_with(".gguf") {
+        return Err("文件名必须以 .gguf 结尾".to_string());
+    }
+
+    let runtime = crate::paths::runtime_dir();
+    let dest = runtime.join(&filename);
+
+    if dest.exists() {
+        return Ok(format!("{} 已存在", filename));
+    }
+
+    log(&format!("开始下载模型: {} -> {}", url, filename));
+
+    let resp = ureq::get(&url)
+        .call()
+        .map_err(|e| format!("下载请求失败: {}", e))?;
+
+    let total: u64 = resp
+        .header("Content-Length")
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(0);
+
+    let mut reader = resp.into_reader();
+    let mut data: Vec<u8> = if total > 0 {
+        Vec::with_capacity(total as usize)
+    } else {
+        Vec::new()
+    };
+    let mut buf = [0u8; 65536]; // 64KB reads
+    let mut downloaded: u64 = 0;
+    let mut last_emit = 0u64;
+
+    loop {
+        let n = reader
+            .read(&mut buf)
+            .map_err(|e| format!("下载读取失败: {}", e))?;
+        if n == 0 { break; }
+        data.extend_from_slice(&buf[..n]);
+        downloaded += n as u64;
+
+        // Emit progress ~every 1% or 5MB
+        if total > 0 && downloaded - last_emit > total / 100 {
+            last_emit = downloaded;
+            let _ = app_handle.emit("model_download_progress", serde_json::json!({
+                "filename": filename,
+                "downloaded": downloaded,
+                "total": total,
+            }));
+        }
+    }
+
+    std::fs::write(&dest, &data).map_err(|e| format!("写入文件失败: {}", e))?;
+
+    let size_mb = data.len() as f64 / 1_048_576.0;
+    log(&format!("下载完成: {} ({:.1} MB)", filename, size_mb));
+
+    let _ = app_handle.emit("model_download_complete", serde_json::json!({
+        "filename": filename,
+        "size_bytes": data.len(),
+    }));
+    Ok(format!("下载完成 {} ({:.1} MB)", filename, size_mb))
+}
+
+#[tauri::command]
+pub fn delete_model(filename: String) -> Result<String, String> {
+    if !filename.ends_with(".gguf") {
+        return Err("只能删除 .gguf 文件".to_string());
+    }
+    let runtime = crate::paths::runtime_dir();
+    let path = runtime.join(&filename);
+    if !path.exists() {
+        return Err(format!("模型不存在: {}", filename));
+    }
+    std::fs::remove_file(&path).map_err(|e| format!("删除失败: {}", e))?;
+    log(&format!("已删除模型: {}", filename));
+    Ok(format!("已删除 {}", filename))
 }
 
 // ---------------------------------------------------------------------------
