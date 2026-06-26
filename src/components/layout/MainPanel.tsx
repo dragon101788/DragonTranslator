@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import InputArea from "../translation/InputArea";
 import OutputCard from "../translation/OutputCard";
 import SettingsDialog from "../settings/SettingsDialog";
+import StyleManager from "../settings/StyleManager";
 import HistoryPanel from "./HistoryPanel";
 import { useConfigStore } from "../../stores/configStore";
 import { useHistoryStore } from "../../stores/historyStore";
@@ -41,10 +42,12 @@ function makeRecord(source: string, translated: string, provider: string, model:
 
 interface MainPanelProps {
   view: ViewType;
+  editingStyleId: string | null;
+  onCloseStyleEditor: () => void;
   onBack: () => void;
 }
 
-export default function MainPanel({ view, onBack }: MainPanelProps) {
+export default function MainPanel({ view, editingStyleId, onCloseStyleEditor, onBack }: MainPanelProps) {
   const settings = useConfigStore((s) => s.settings);
   const tts = useTTS();
 
@@ -209,10 +212,16 @@ export default function MainPanel({ view, onBack }: MainPanelProps) {
 
   return (
     <div className="flex flex-col h-full bg-lexi-bg">
-      {view === "history" && <HistoryPanel onClose={onBack} />}
-      {view === "settings" && <SettingsDialog onClose={onBack} />}
+      {editingStyleId !== null && (
+        <StyleManager
+          editStyleId={editingStyleId === "new" ? null : editingStyleId}
+          onClose={onCloseStyleEditor}
+        />
+      )}
+      {editingStyleId === null && view === "history" && <HistoryPanel onClose={onBack} />}
+      {editingStyleId === null && view === "settings" && <SettingsDialog onClose={onBack} />}
 
-      {view === "translation" && (
+      {editingStyleId === null && view === "translation" && (
         <div className="flex flex-col h-full min-h-0 overflow-y-auto pt-4">
           {/* Status bar */}
           <div className="flex items-center gap-2 px-5 py-1.5 text-xs text-lexi-text-muted border-b border-lexi-border/50">

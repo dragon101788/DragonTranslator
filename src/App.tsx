@@ -112,6 +112,7 @@ function App() {
 
   // ---- View management ----
   const [view, setView] = useState<ViewType>("translation");
+  const [editingStyleId, setEditingStyleId] = useState<string | null>(null);
 
   const handleCloseRequest = useCallback(() => {
     if (!isTauri()) return;
@@ -144,10 +145,14 @@ function App() {
           onSelectTranslation={goToTranslation}
           onOpenHistory={() => setView("history")}
           onOpenSettings={() => setView("settings")}
+          onNewStyle={() => setEditingStyleId("new")}
+          onEditStyle={(id) => setEditingStyleId(id)}
         />
         <div className="flex-1 min-w-0">
           <MainPanel
             view={view}
+            editingStyleId={editingStyleId}
+            onCloseStyleEditor={() => setEditingStyleId(null)}
             onBack={goToTranslation}
           />
         </div>
