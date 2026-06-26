@@ -1,6 +1,15 @@
 import { useRef, useEffect } from "react";
 import { StopCircle, Copy, Check, Loader2, Cloud, Cpu, Volume2, Square } from "lucide-react";
-import type { CardStream } from "../../hooks/useMultiTranslate";
+interface CardStream {
+  providerId: string;
+  providerName: string;
+  providerIcon: string;
+  model: string;
+  result: string | null;
+  error: string | null;
+  translating: boolean;
+  latency: number;
+}
 import { useTTS } from "../../hooks/useTTS";
 
 interface OutputCardProps {

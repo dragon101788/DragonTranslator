@@ -23,12 +23,10 @@ interface ConfigStore {
   // Bulk
   importAll: (data: {
     providers: LLMProvider[];
-    agents: any[];
     settings: AppSettings;
   }) => void;
   exportAll: () => {
     providers: LLMProvider[];
-    agents: any[];
     settings: AppSettings;
   };
 }
@@ -100,7 +98,6 @@ export const useConfigStore = create<ConfigStore>((set, get) => ({
 
   exportAll: () => ({
     providers: get().providers,
-    agents: [], // filled by caller
     settings: get().settings,
   }),
 }));

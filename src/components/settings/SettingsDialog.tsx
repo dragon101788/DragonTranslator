@@ -7,7 +7,6 @@ import TTSTab from "./TTSTab";
 import DebugTab from "./DebugTab";
 import BergamotTab from "./BergamotTab";
 import { useConfigStore } from "../../stores/configStore";
-import { useAgentStore } from "../../stores/agentStore";
 import { useHistoryStore } from "../../stores/historyStore";
 
 interface SettingsDialogProps {
@@ -86,7 +85,6 @@ export default function SettingsDialog({ onClose }: SettingsDialogProps) {
 
         const data = await resp.json();
         if (data.providers) useConfigStore.setState({ providers: data.providers });
-        if (data.agents) useAgentStore.setState({ agents: data.agents, activeAgentId: data.activeAgentId });
         if (data.settings) useConfigStore.setState({ settings: data.settings });
         if (data.records) useHistoryStore.setState({ records: data.records });
 
@@ -95,8 +93,6 @@ export default function SettingsDialog({ onClose }: SettingsDialogProps) {
         // Push to WebDAV
         const data = {
           providers: useConfigStore.getState().providers,
-          agents: useAgentStore.getState().agents,
-          activeAgentId: useAgentStore.getState().activeAgentId,
           settings: useConfigStore.getState().settings,
           records: useHistoryStore.getState().records,
         };

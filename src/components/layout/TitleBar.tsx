@@ -1,36 +1,30 @@
 import { useState, useEffect, useCallback } from "react";
 import { History, Settings, ArrowLeft } from "lucide-react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import type { TranslationAgent } from "../../types";
 
 function isTauri() {
   return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 }
 
-type ViewType = "translation" | "agent-editor" | "history" | "settings";
+type ViewType = "translation" | "history" | "settings";
 
 interface TitleBarProps {
   onCloseRequest?: () => void;
   onOpenHistory?: () => void;
   onOpenSettings?: () => void;
   view: ViewType;
-  activeAgent: TranslationAgent | null;
   onBack?: () => void;
 }
 
-function getViewTitle(view: ViewType, activeAgent: TranslationAgent | null): { icon: string; text: string } {
-  if (view === "translation" && activeAgent) {
-    return { icon: activeAgent.icon, text: activeAgent.name };
-  }
+function getViewTitle(view: ViewType): { text: string } {
   switch (view) {
-    case "history": return { icon: "", text: "翻译历史" };
-    case "settings": return { icon: "", text: "设置" };
-    case "agent-editor": return { icon: "", text: "智能体编辑" };
-    default: return { icon: "", text: "龙腾翻译" };
+    case "history": return { text: "翻译历史" };
+    case "settings": return { text: "设置" };
+    default: return { text: "翻译" };
   }
 }
 
-export default function TitleBar({ onCloseRequest, onOpenHistory, onOpenSettings, view, activeAgent, onBack }: TitleBarProps) {
+export default function TitleBar({ onCloseRequest, onOpenHistory, onOpenSettings, view, onBack }: TitleBarProps) {
   const [maximized, setMaximized] = useState(false);
   const [appWindow, setAppWindow] = useState<ReturnType<typeof getCurrentWindow> | null>(null);
 
@@ -78,7 +72,7 @@ export default function TitleBar({ onCloseRequest, onOpenHistory, onOpenSettings
 
   if (!isTauri()) {
     // Browser fallback: simple toolbar with nav buttons
-    const { icon, text } = getViewTitle(view, activeAgent);
+    const { text } = getViewTitle(view);
     const showBack = view !== "translation" && onBack;
     return (
       <div className="flex items-center h-10 bg-lexi-bg border-b border-lexi-border shrink-0 select-none px-3 gap-2">
@@ -87,8 +81,7 @@ export default function TitleBar({ onCloseRequest, onOpenHistory, onOpenSettings
             <ArrowLeft size={16} />
           </button>
         )}
-        <span className="text-sm font-semibold text-lexi-text flex-1 flex items-center gap-2">
-          {icon && <span>{icon}</span>}
+        <span className="text-sm font-semibold text-lexi-text flex-1">
           {text}
         </span>
         {onOpenHistory && (
@@ -105,7 +98,7 @@ export default function TitleBar({ onCloseRequest, onOpenHistory, onOpenSettings
     );
   }
 
-  const { icon, text } = getViewTitle(view, activeAgent);
+  const { text } = getViewTitle(view);
   const showBack = view !== "translation" && onBack;
 
   return (
@@ -125,7 +118,6 @@ export default function TitleBar({ onCloseRequest, onOpenHistory, onOpenSettings
             <ArrowLeft size={13} />
           </button>
         )}
-        {icon && <span className="text-base leading-none">{icon}</span>}
         <span className="text-[11px] text-lexi-text-muted font-medium tracking-wide cursor-default">
           {text}
         </span>

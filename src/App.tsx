@@ -4,11 +4,9 @@ import MainPanel from "./components/layout/MainPanel";
 import TitleBar from "./components/layout/TitleBar";
 import { usePersistence } from "./hooks/usePersistence";
 import { useConfigStore } from "./stores/configStore";
-import { useAgentStore } from "./stores/agentStore";
 import { logger } from "./services/logger";
-import type { TranslationAgent } from "./types";
 
-type ViewType = "translation" | "agent-editor" | "history" | "settings";
+type ViewType = "translation" | "history" | "settings";
 
 function isTauri() {
   return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
@@ -36,7 +34,6 @@ function App() {
         });
         logger.info(`本地模型自动启动成功: ${msg}`);
 
-        // Register local provider
         const localUrl = `http://127.0.0.1:${localModel.port}/v1`;
         const state = useConfigStore.getState();
         const existing = state.providers.find((p) => p.id === "local");
@@ -80,8 +77,6 @@ function App() {
     });
   }, []);
 
-  // Watch for settings changes that may be loaded from persistence
-  // after mount, and re-register the shortcut if needed
   useEffect(() => {
     if (!isTauri()) return;
     const unsub = useConfigStore.subscribe((state, prev) => {
@@ -117,9 +112,6 @@ function App() {
 
   // ---- View management ----
   const [view, setView] = useState<ViewType>("translation");
-  const [editingAgentId, setEditingAgentId] = useState<string | null>(null);
-
-  // ---- Window close logic ----
 
   const handleCloseRequest = useCallback(() => {
     if (!isTauri()) return;
@@ -135,19 +127,7 @@ function App() {
     }
   }, []);
 
-  // ---- Navigation callbacks ----
-
   const goToTranslation = useCallback(() => setView("translation"), []);
-
-  const handleSelectAgent = useCallback((agentId: string) => {
-    useAgentStore.getState().setActiveAgent(agentId);
-    setView("translation");
-  }, []);
-
-  const handleOpenAgentEditor = useCallback((agent: TranslationAgent | null) => {
-    setEditingAgentId(agent?.id ?? null);
-    setView("agent-editor");
-  }, []);
 
   return (
     <div className="flex flex-col h-screen w-screen bg-lexi-bg overflow-hidden">
@@ -156,24 +136,16 @@ function App() {
         onOpenHistory={() => setView("history")}
         onOpenSettings={() => setView("settings")}
         view={view}
-        activeAgent={useAgentStore(s => view === "translation" ? s.getActiveAgent() : null)}
         onBack={goToTranslation}
       />
       <div className="flex flex-1 min-h-0">
         <Sidebar
           activeView={view}
-          onSelectAgent={handleSelectAgent}
-          onNewAgent={() => handleOpenAgentEditor(null)}
-          onEditAgent={handleOpenAgentEditor}
+          onSelectTranslation={goToTranslation}
         />
         <div className="flex-1 min-w-0">
           <MainPanel
             view={view}
-            editingAgentId={editingAgentId}
-            onCloseAgentEditor={() => {
-              setEditingAgentId(null);
-              setView("translation");
-            }}
             onBack={goToTranslation}
           />
         </div>

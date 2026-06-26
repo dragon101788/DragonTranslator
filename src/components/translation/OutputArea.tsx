@@ -130,7 +130,7 @@ export default function OutputArea({
       <div className="flex items-center justify-center h-full bg-lexi-card border border-lexi-border border-dashed">
         <div className="text-center text-lexi-text-muted">
           <div className="text-3xl mb-2">✨</div>
-          <div className="text-sm">选择智能体，输入文本，开始翻译</div>
+          <div className="text-sm">输入文本，开始离线翻译</div>
           <div className="text-xs mt-1 opacity-60">Enter 翻译, Shift+Enter 换行</div>
         </div>
       </div>

@@ -23,8 +23,7 @@ export default function HistoryPanel(_props: HistoryPanelProps) {
       const q = search.toLowerCase();
       return (
         r.sourceText.toLowerCase().includes(q) ||
-        r.translatedText.toLowerCase().includes(q) ||
-        r.agentName.toLowerCase().includes(q)
+        r.translatedText.toLowerCase().includes(q)
       );
     }
     return true;
@@ -129,7 +128,7 @@ export default function HistoryPanel(_props: HistoryPanelProps) {
                         {record.sourceText}
                       </div>
                       <div className="flex items-center gap-2 mt-1 text-xs text-lexi-text-muted">
-                        <span>{record.agentName}</span>
+                        <span>{record.providerName}</span>
                         <span>·</span>
                         <Clock size={10} />
                         <span>{formatTime(record.timestamp)}</span>
@@ -158,7 +157,7 @@ export default function HistoryPanel(_props: HistoryPanelProps) {
               <div className="space-y-4 animate-fade-in">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 text-sm text-lexi-text-muted">
-                    <span>{selectedRecord.agentName}</span>
+                    <span>{selectedRecord.providerName}</span>
                     <span>·</span>
                     <span>{selectedRecord.model}</span>
                     <span>·</span>

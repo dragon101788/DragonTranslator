@@ -1,22 +1,3 @@
-// ============== Translation Agent ==============
-export interface TranslationAgent {
-  id: string;
-  name: string;
-  icon: string;
-  description: string;
-  systemPrompt: string;
-  config: AgentConfig;
-  useBergamot?: boolean; // 快速翻译模式，走 Bergamot 离线引擎
-  createdAt: number;
-  updatedAt: number;
-}
-
-export interface AgentConfig {
-  model: string;
-  temperature: number;
-  maxTokens: number;
-}
-
 // ============== LLM Provider ==============
 export interface LLMProvider {
   id: string;
@@ -31,8 +12,6 @@ export interface LLMProvider {
 // ============== Translation Record ==============
 export interface TranslationRecord {
   id: string;
-  agentId: string;
-  agentName: string;
   sourceText: string;
   translatedText: string; // Markdown
   sourceLang: string;
@@ -66,6 +45,9 @@ export interface AppSettings {
   logLevel: "debug" | "info" | "warn" | "error";
   // Bergamot offline translation
   bergamot: BergamotConfig;
+  // Polish styles (LLM polishing on top of Bergamot)
+  polishStyles: PolishStyle[];
+  activeStyleId: string | null;
   // Local model (llamafile)
   localModel: LocalModelConfig;
 }
@@ -80,6 +62,14 @@ export interface LocalModelConfig {
 export interface GgufModelInfo {
   name: string;
   size_bytes: number;
+}
+
+export interface PolishStyle {
+  id: string;
+  name: string;
+  icon: string;
+  prompt: string; // system prompt, empty = Bergamot only
+  userTemplate: string; // template for user message. {source} {bergamot} {style} are replaced
 }
 
 export interface CuratedModel {
@@ -122,8 +112,6 @@ export interface ApiTestResult {
 //   Tauri:  get_default_config() → embedded user/default-config.json
 //   Browser: fetch('/default-config.json') → Vite-served user/default-config.json
 
-export const DEFAULT_AGENTS: TranslationAgent[] = [];
-
 export const DEFAULT_PROVIDER: LLMProvider = {
   id: "default",
   name: "",
@@ -159,6 +147,10 @@ export const DEFAULT_SETTINGS: AppSettings = {
     cacheSize: 0,
     direction: "auto",
   },
+  polishStyles: [
+    { id: "plain", name: "直接翻译", icon: "🔄", prompt: "", userTemplate: "原文：{source}\n机翻：{bergamot}\n请润色，输出{targetLang}。" },
+  ],
+  activeStyleId: "plain",
   localModel: {
     enabled: true,
     port: 5158,

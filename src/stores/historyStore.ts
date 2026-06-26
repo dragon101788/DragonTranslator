@@ -4,7 +4,6 @@ import type { TranslationRecord } from "../types";
 interface HistoryStore {
   records: TranslationRecord[];
   searchQuery: string;
-  filterAgentId: string | null;
 
   // Actions
   addRecord: (record: TranslationRecord) => void;
@@ -12,18 +11,15 @@ interface HistoryStore {
   clearAll: () => void;
   toggleFavorite: (id: string) => void;
   setSearchQuery: (query: string) => void;
-  setFilterAgentId: (agentId: string | null) => void;
 
   // Computed
   getFilteredRecords: () => TranslationRecord[];
   getFavoriteRecords: () => TranslationRecord[];
-  getRecordsByAgent: (agentId: string) => TranslationRecord[];
 }
 
 export const useHistoryStore = create<HistoryStore>((set, get) => ({
   records: [],
   searchQuery: "",
-  filterAgentId: null,
 
   addRecord: (record) =>
     set((state) => ({
@@ -45,7 +41,6 @@ export const useHistoryStore = create<HistoryStore>((set, get) => ({
     })),
 
   setSearchQuery: (query) => set({ searchQuery: query }),
-  setFilterAgentId: (agentId) => set({ filterAgentId: agentId }),
 
   getFilteredRecords: () => {
     const state = get();
@@ -60,15 +55,8 @@ export const useHistoryStore = create<HistoryStore>((set, get) => ({
       );
     }
 
-    if (state.filterAgentId) {
-      records = records.filter((r) => r.agentId === state.filterAgentId);
-    }
-
     return records;
   },
 
   getFavoriteRecords: () => get().records.filter((r) => r.isFavorite),
-
-  getRecordsByAgent: (agentId) =>
-    get().records.filter((r) => r.agentId === agentId),
 }));

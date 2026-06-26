@@ -1,192 +1,267 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
-  Plus,
-  Trash2,
-  Copy,
-  Settings as SettingsIcon,
+  Languages, History, Settings as SettingsIcon, ChevronLeft, ChevronRight,
+  Plus, Trash2, Edit3, X, Check,
 } from "lucide-react";
-import { useAgentStore } from "../../stores/agentStore";
-import type { TranslationAgent } from "../../types";
+import { useConfigStore } from "../../stores/configStore";
+import type { PolishStyle } from "../../types";
 
-type ViewType = "translation" | "agent-editor" | "history" | "settings";
+type ViewType = "translation" | "history" | "settings";
 
 interface SidebarProps {
   activeView: ViewType;
-  onSelectAgent: (agentId: string) => void;
-  onEditAgent: (agent: TranslationAgent | null) => void;
-  onNewAgent: () => void;
+  onSelectTranslation: () => void;
+  onOpenHistory?: () => void;
+  onOpenSettings?: () => void;
 }
 
-const COLLAPSE_THRESHOLD = 120;
+const ICON_OPTIONS = ["🔄","💬","📚","🎓","🎨","🤖","✨","🔮","💡","🌍","📝","🎯","🔥","⭐","💎","🎭","🧠","🚀","🌈","🎵"];
 
 export default function Sidebar({
   activeView,
-  onSelectAgent,
-  onEditAgent,
-  onNewAgent,
+  onSelectTranslation,
+  onOpenHistory,
+  onOpenSettings,
 }: SidebarProps) {
-  const agents = useAgentStore((s) => s.agents);
-  const activeAgentId = useAgentStore((s) => s.activeAgentId);
-  const deleteAgent = useAgentStore((s) => s.deleteAgent);
-  const duplicateAgent = useAgentStore((s) => s.duplicateAgent);
-  const [width, setWidth] = useState(256);
-  const [hoveredId, setHoveredId] = useState<string | null>(null);
-  const draggingRef = useRef(false);
+  const polishStyles = useConfigStore((s) => s.settings.polishStyles);
+  const activeStyleId = useConfigStore((s) => s.settings.activeStyleId);
+  const updateSettings = useConfigStore((s) => s.updateSettings);
+
+  const [compact, setCompact] = useState(false);
+  const [width, setWidth] = useState(220);
+  const dragging = useRef(false);
+  const MIN_W = compact ? 48 : 160;
+  const MAX_W = compact ? 80 : 400;
+
+  // Style editor state
+  const [editingStyle, setEditingStyle] = useState<PolishStyle | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editIcon, setEditIcon] = useState("");
+  const [editPrompt, setEditPrompt] = useState("");
+  const [editTemplate, setEditTemplate] = useState("");
 
   useEffect(() => {
-    const onMouseMove = (e: MouseEvent) => {
-      if (!draggingRef.current) return;
-      const w = Math.min(Math.max(e.clientX, 56), 400);
-      setWidth(w);
+    const onMove = (e: MouseEvent) => {
+      if (!dragging.current) return;
+      const newW = Math.min(MAX_W, Math.max(MIN_W, e.clientX));
+      setWidth(newW);
     };
-    const onMouseUp = () => {
-      draggingRef.current = false;
-      document.body.style.cursor = "";
-      document.body.style.userSelect = "";
-    };
-    document.addEventListener("mousemove", onMouseMove);
-    document.addEventListener("mouseup", onMouseUp);
+    const onUp = () => { dragging.current = false; };
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
     return () => {
-      document.removeEventListener("mousemove", onMouseMove);
-      document.removeEventListener("mouseup", onMouseUp);
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
     };
-  }, []);
+  }, [MIN_W, MAX_W]);
 
-  const handleDragStart = useCallback(() => {
-    draggingRef.current = true;
-    document.body.style.cursor = "col-resize";
-    document.body.style.userSelect = "none";
-  }, []);
+  const navItems = [
+    { key: "translation" as const, icon: <Languages size={18} />, label: "翻译", onClick: onSelectTranslation },
+    { key: "history" as const, icon: <History size={18} />, label: "历史", onClick: onOpenHistory || (() => {}) },
+    { key: "settings" as const, icon: <SettingsIcon size={18} />, label: "设置", onClick: onOpenSettings || (() => {}) },
+  ];
 
-  const collapsed = width < COLLAPSE_THRESHOLD;
+  const selectStyle = (id: string) => {
+    updateSettings({ activeStyleId: id });
+    onSelectTranslation();
+  };
+
+  const DEFAULT_PROMPT = "你是一个翻译润色助手。根据用户提供的原文和机翻结果，将译文改写得更自然流畅。\n只输出润色后的译文，禁止解释、问候、或回应原文内容。";
+  const DEFAULT_TEMPLATE = "原文：{source}\n机翻：{bergamot}\n请润色，输出{targetLang}。";
+
+  const openNewStyle = () => {
+    setEditingStyle({ id: "", name: "", icon: "🤖", prompt: DEFAULT_PROMPT, userTemplate: DEFAULT_TEMPLATE });
+    setEditName("");
+    setEditIcon("🤖");
+    setEditPrompt(DEFAULT_PROMPT);
+    setEditTemplate(DEFAULT_TEMPLATE);
+  };
+
+  const openEditStyle = (s: PolishStyle) => {
+    setEditingStyle(s);
+    setEditName(s.name);
+    setEditIcon(s.icon);
+    setEditPrompt(s.prompt);
+    setEditTemplate(s.userTemplate || DEFAULT_TEMPLATE);
+  };
+
+  const saveStyle = () => {
+    if (!editName.trim()) return;
+    const isNew = !editingStyle?.id;
+    if (isNew) {
+      const id = `style-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+      const newStyles = [...polishStyles, {
+        id, name: editName.trim(), icon: editIcon,
+        prompt: editPrompt.trim(), userTemplate: editTemplate.trim() || DEFAULT_TEMPLATE,
+      }];
+      updateSettings({ polishStyles: newStyles });
+    } else {
+      const newStyles = polishStyles.map((s) =>
+        s.id === editingStyle!.id ? {
+          ...s, name: editName.trim(), icon: editIcon,
+          prompt: editPrompt.trim(), userTemplate: editTemplate.trim() || DEFAULT_TEMPLATE,
+        } : s
+      );
+      updateSettings({ polishStyles: newStyles });
+    }
+    setEditingStyle(null);
+  };
+
+  const deleteStyle = (id: string) => {
+    if (polishStyles.length <= 1) return;
+    const newStyles = polishStyles.filter((s) => s.id !== id);
+    const newActiveId = activeStyleId === id ? newStyles[0].id : activeStyleId;
+    updateSettings({ polishStyles: newStyles, activeStyleId: newActiveId });
+  };
 
   return (
-    <div className="flex">
-      <div
-        className="flex flex-col bg-lexi-sidebar border-r border-lexi-border h-full shrink-0"
-        style={{ width }}
-      >
-        {collapsed ? (
-          /* ---- Compact view ---- */
-          <div className="flex-1 overflow-y-auto px-1 pt-3">
-            {agents.map((agent) => (
-              <div
-                key={agent.id}
-                className={`relative mb-1 rounded-lg transition-all cursor-pointer ${
-                  agent.id === activeAgentId && activeView === "translation"
-                    ? "bg-lexi-accent/20 text-lexi-accent-hover"
-                    : "hover:bg-lexi-hover"
-                }`}
-                onClick={() => onSelectAgent(agent.id)}
-                onMouseEnter={() => setHoveredId(agent.id)}
-                onMouseLeave={() => setHoveredId(null)}
-              >
-                <div className="flex items-center gap-2 p-2">
-                  <span className="text-lg flex-shrink-0">{agent.icon}</span>
-                  {width >= 80 && (
-                    <span className="text-xs text-lexi-text truncate">
-                      {agent.name}
-                    </span>
-                  )}
-                </div>
-              </div>
-            ))}
-            <button
-              onClick={onNewAgent}
-              className="flex items-center justify-center w-full p-2 rounded-lg text-lexi-text-muted hover:bg-lexi-hover hover:text-lexi-text transition-colors"
-              title="新增智能体"
-            >
-              <Plus size={16} />
-            </button>
-          </div>
-        ) : (
-          /* ---- Full view ---- */
-          <>
-            <div className="flex-1 overflow-y-auto px-2 pt-3">
-              <div className="flex items-center justify-between px-2 mb-1">
-                <span className="text-xs font-medium text-lexi-text-muted uppercase tracking-wider">
-                  智能体
-                </span>
-                <button
-                  onClick={onNewAgent}
-                  className="p-1 rounded-md hover:bg-lexi-hover text-lexi-text-muted hover:text-lexi-accent-hover transition-colors"
-                  title="新增智能体"
-                >
-                  <Plus size={16} />
-                </button>
-              </div>
-
-              {agents.map((agent) => (
-                <div
-                  key={agent.id}
-                  className={`group relative mb-1 rounded-lg transition-all cursor-pointer ${
-                    agent.id === activeAgentId && activeView === "translation"
-                      ? "bg-lexi-accent/15 ring-1 ring-lexi-accent/30"
-                      : "hover:bg-lexi-hover"
-                  }`}
-                  onClick={() => onSelectAgent(agent.id)}
-                  onMouseEnter={() => setHoveredId(agent.id)}
-                  onMouseLeave={() => setHoveredId(null)}
-                >
-                  <div className="flex items-start gap-3 p-3">
-                    <span className="text-xl flex-shrink-0 mt-0.5">{agent.icon}</span>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium text-lexi-text truncate">
-                        {agent.name}
-                      </div>
-                      <div className="text-xs text-lexi-text-muted line-clamp-2 mt-0.5">
-                        {agent.description}
-                      </div>
-                    </div>
-                  </div>
-
-                  {hoveredId === agent.id && (
-                    <div className="absolute right-1 top-1 flex gap-0.5 bg-lexi-sidebar/95 rounded-lg p-0.5 shadow-lg animate-fade-in">
-                      <button
-                        onClick={(e) => { e.stopPropagation(); onEditAgent(agent); }}
-                        className="p-1 rounded hover:bg-lexi-hover text-lexi-text-muted hover:text-lexi-text transition-colors"
-                        title="编辑"
-                      >
-                        <SettingsIcon size={14} />
-                      </button>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); duplicateAgent(agent.id); }}
-                        className="p-1 rounded hover:bg-lexi-hover text-lexi-text-muted hover:text-lexi-text transition-colors"
-                        title="复制"
-                      >
-                        <Copy size={14} />
-                      </button>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); if (agents.length <= 1) return; deleteAgent(agent.id); }}
-                        className="p-1 rounded hover:bg-red-500/20 text-lexi-text-muted hover:text-red-400 transition-colors"
-                        title="删除"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-
-            <div className="border-t border-lexi-border p-2">
-              <button
-                onClick={onNewAgent}
-                className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm text-lexi-text-muted hover:bg-lexi-hover hover:text-lexi-text transition-colors"
-              >
-                <Plus size={16} />
-                <span>新增智能体</span>
-              </button>
-            </div>
-          </>
-        )}
+    <div
+      className="flex flex-col bg-lexi-card border-r border-lexi-border relative"
+      style={{ width: compact ? (width < 80 ? 48 : width) : width }}
+    >
+      {/* Nav items */}
+      <div className="py-3 px-2 space-y-1">
+        {navItems.map((item) => (
+          <button
+            key={item.key}
+            onClick={item.onClick}
+            title={compact ? item.label : undefined}
+            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
+              activeView === item.key
+                ? "bg-lexi-accent/20 text-lexi-accent"
+                : "text-lexi-text-muted hover:bg-lexi-hover hover:text-lexi-text"
+            }`}
+          >
+            <span className="flex-shrink-0">{item.icon}</span>
+            {!compact && <span className="truncate">{item.label}</span>}
+          </button>
+        ))}
       </div>
 
-      {/* Drag handle */}
-      <div
-        className="w-1 cursor-col-resize hover:bg-lexi-accent/30 active:bg-lexi-accent/50 transition-colors shrink-0"
-        onMouseDown={handleDragStart}
-      />
+      {/* Divider */}
+      <div className="mx-3 border-t border-lexi-border" />
+
+      {/* Style list */}
+      <div className="flex-1 py-3 px-2 space-y-1 overflow-y-auto">
+        {!compact && (
+          <div className="flex items-center justify-between px-3 py-1">
+            <span className="text-xs text-lexi-text-muted font-medium tracking-wide">风格</span>
+            <button onClick={openNewStyle} className="p-0.5 rounded hover:bg-lexi-hover text-lexi-text-muted hover:text-lexi-text">
+              <Plus size={14} />
+            </button>
+          </div>
+        )}
+        {polishStyles.map((s) => (
+          <div key={s.id} className="group relative">
+            <button
+              onClick={() => selectStyle(s.id)}
+              onDoubleClick={() => openEditStyle(s)}
+              title={compact ? s.name : undefined}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
+                activeStyleId === s.id
+                  ? "bg-lexi-accent/20 text-lexi-accent"
+                  : "text-lexi-text-muted hover:bg-lexi-hover hover:text-lexi-text"
+              }`}
+            >
+              <span className="flex-shrink-0 text-base">{s.icon}</span>
+              {!compact && <span className="truncate">{s.name}</span>}
+              {!compact && s.prompt && (
+                <span className="w-1.5 h-1.5 rounded-full bg-lexi-accent/60 flex-shrink-0 ml-auto" title="LLM 润色已启用" />
+              )}
+            </button>
+            {/* Hover actions */}
+            {!compact && (
+              <div className="absolute right-1 top-1/2 -translate-y-1/2 hidden group-hover:flex items-center gap-0.5 bg-lexi-card px-1 rounded">
+                <button onClick={() => openEditStyle(s)} className="p-1 rounded hover:bg-lexi-hover text-lexi-text-muted">
+                  <Edit3 size={12} />
+                </button>
+                {polishStyles.length > 1 && (
+                  <button onClick={() => deleteStyle(s.id)} className="p-1 rounded hover:bg-red-400/10 text-lexi-text-muted hover:text-red-400">
+                    <Trash2 size={12} />
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* Style editor modal */}
+      {editingStyle && (
+        <div className="absolute inset-0 z-50 bg-lexi-card flex flex-col">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-lexi-border">
+            <span className="text-sm font-medium text-lexi-text">
+              {editingStyle.id ? "编辑风格" : "新建风格"}
+            </span>
+            <div className="flex items-center gap-1">
+              <button onClick={saveStyle} disabled={!editName.trim()} className="p-1.5 rounded hover:bg-green-400/10 text-green-400 disabled:opacity-30">
+                <Check size={16} />
+              </button>
+              <button onClick={() => setEditingStyle(null)} className="p-1.5 rounded hover:bg-lexi-hover text-lexi-text-muted">
+                <X size={16} />
+              </button>
+            </div>
+          </div>
+          <div className="flex-1 overflow-y-auto p-4 space-y-3">
+            <div>
+              <label className="block text-xs text-lexi-text-muted mb-1">名称</label>
+              <input
+                type="text" value={editName} onChange={(e) => setEditName(e.target.value)}
+                placeholder="例如：口语润色"
+                className="w-full bg-lexi-input border border-lexi-border rounded-lg px-3 py-2 text-sm text-lexi-text placeholder-lexi-text-muted/40 focus:outline-none focus:ring-1 focus:ring-lexi-accent"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-lexi-text-muted mb-1">图标</label>
+              <div className="grid grid-cols-8 gap-1">
+                {ICON_OPTIONS.map((emoji) => (
+                  <button
+                    key={emoji} onClick={() => setEditIcon(emoji)}
+                    className={`w-8 h-8 flex items-center justify-center rounded text-lg ${
+                      editIcon === emoji ? "bg-lexi-accent/20 ring-1 ring-lexi-accent/40" : "hover:bg-lexi-hover"
+                    }`}
+                  >
+                    {emoji}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs text-lexi-text-muted mb-1">
+                系统提示词 <span className="text-lexi-text-muted/60">（留空 = 仅 Bergamot，无润色）</span>
+              </label>
+              <textarea
+                value={editPrompt} onChange={(e) => setEditPrompt(e.target.value)}
+                rows={8}
+                placeholder="给 LLM 的系统提示词..."
+                className="w-full bg-lexi-input border border-lexi-border rounded-lg px-3 py-2 text-sm text-lexi-text placeholder-lexi-text-muted/40 focus:outline-none focus:ring-1 focus:ring-lexi-accent resize-none font-mono"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-lexi-text-muted mb-1">
+                消息模板 <span className="text-lexi-text-muted/60">（{'{source}'} {'{bergamot}'} {'{targetLang}'} 为占位符）</span>
+              </label>
+              <textarea
+                value={editTemplate} onChange={(e) => setEditTemplate(e.target.value)}
+                rows={4}
+                className="w-full bg-lexi-input border border-lexi-border rounded-lg px-3 py-2 text-sm text-lexi-text placeholder-lexi-text-muted/40 focus:outline-none focus:ring-1 focus:ring-lexi-accent resize-none font-mono"
+              />
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Compact toggle */}
+      <div className="p-2">
+        <button
+          onClick={() => setCompact(!compact)}
+          className="w-full flex items-center justify-center p-2 rounded-lg text-lexi-text-muted hover:bg-lexi-hover hover:text-lexi-text transition-colors"
+          title={compact ? "展开侧栏" : "收起侧栏"}
+        >
+          {compact ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+        </button>
+      </div>
+      <div className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-lexi-accent/30 transition-colors"
+        onMouseDown={() => { dragging.current = true; }} />
     </div>
   );
 }

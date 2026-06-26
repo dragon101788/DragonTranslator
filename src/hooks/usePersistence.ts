@@ -1,9 +1,8 @@
 import { useEffect, useRef } from "react";
-import { useAgentStore } from "../stores/agentStore";
 import { useConfigStore } from "../stores/configStore";
 import { useHistoryStore } from "../stores/historyStore";
 import type { Store } from "@tauri-apps/plugin-store";
-import type { TranslationAgent, LLMProvider, AppSettings } from "../types";
+import type { LLMProvider, AppSettings } from "../types";
 import { DEFAULT_SETTINGS } from "../types";
 import { logger } from "../services/logger";
 
@@ -11,8 +10,6 @@ const STORE_FILENAME = "config.json";
 const LS_KEY = "dragon-translator-config";
 
 interface PersistedData {
-  agents: TranslationAgent[];
-  activeAgentId: string | null;
   providers: LLMProvider[];
   activeProviderId: string | null;
   settings: AppSettings;
@@ -32,8 +29,6 @@ function isTauriEnv(): boolean {
 
 function getSnapshot(): PersistedData {
   return {
-    agents: useAgentStore.getState().agents,
-    activeAgentId: useAgentStore.getState().activeAgentId,
     providers: useConfigStore.getState().providers,
     activeProviderId: useConfigStore.getState().activeProviderId,
     settings: useConfigStore.getState().settings,
@@ -42,18 +37,6 @@ function getSnapshot(): PersistedData {
 }
 
 function applySnapshot(data: PersistedData) {
-  if (data.agents && data.agents.length > 0) {
-    // Guard: default-config.json doesn't have activeAgentId,
-    // so a seeded config would overwrite the Zustand default with undefined.
-    const activeAgentId =
-      data.activeAgentId != null
-        ? data.activeAgentId
-        : data.agents[0].id;
-    useAgentStore.setState({
-      agents: data.agents,
-      activeAgentId,
-    });
-  }
   if (data.providers && data.providers.length > 0) {
     // Same guard for activeProviderId
     const activeProviderId =
@@ -127,7 +110,7 @@ async function loadFromFile(): Promise<boolean> {
     applySnapshot(data);
     syncLogLevel(data.settings?.logLevel);
     logger.info(
-      `配置从磁盘加载 (agents=${data.agents?.length ?? 0} providers=${data.providers?.length ?? 0})`
+      `配置从磁盘加载 (providers=${data.providers?.length ?? 0})`
     );
     return true;
   }
@@ -222,7 +205,7 @@ function ensureLocalProvider(rawProviders: LLMProvider[]) {
 }
 
 async function loadDefaults() {
-  let raw: { providers: LLMProvider[]; settings: AppSettings; agents: TranslationAgent[] } | null = null;
+  let raw: { providers: LLMProvider[]; settings: AppSettings } | null = null;
 
   if (isTauriEnv()) {
     try {
@@ -254,13 +237,12 @@ async function loadDefaults() {
 
   const data: PersistedData = {
     ...raw,
-    activeAgentId: raw.agents[0]?.id ?? null,
     activeProviderId: raw.providers[0]?.id ?? null,
     records: [],
   };
   applySnapshot(data);
   logger.info(
-    `默认配置已加载 (agents=${raw.agents.length} providers=${raw.providers.length})`
+    `默认配置已加载 (providers=${raw.providers.length})`
   );
 }
 
@@ -310,16 +292,13 @@ export function usePersistence() {
       readyRef.current = true;
 
       // 2. Subscribe to store changes → auto-persist
-      const unsub1 = useAgentStore.subscribe(() => {
+      const unsub1 = useConfigStore.subscribe(() => {
         if (readyRef.current) schedulePersist();
       });
-      const unsub2 = useConfigStore.subscribe(() => {
+      const unsub2 = useHistoryStore.subscribe(() => {
         if (readyRef.current) schedulePersist();
       });
-      const unsub3 = useHistoryStore.subscribe(() => {
-        if (readyRef.current) schedulePersist();
-      });
-      unsubRef.current = [unsub1, unsub2, unsub3];
+      unsubRef.current = [unsub1, unsub2];
     });
 
     // 3. Best-effort flush before unload
