@@ -52,15 +52,12 @@ export default function MainPanel({ view, editingStyleId, onCloseStyleEditor, on
   const tts = useTTS();
 
   const activeStyle = settings.polishStyles.find((s) => s.id === settings.activeStyleId) || settings.polishStyles[0];
-  const activeProvider = useConfigStore((s) => {
-    const p = s.providers;
-    return p.find((pp) => pp.id === s.activeProviderId) || p[0];
-  });
+  const providers = useConfigStore((s) => s.providers);
 
   // ---- Cards state ----
   const [cards, setCards] = useState<CardData[]>([]);
   const [isTranslating, setIsTranslating] = useState(false);
-  const abortRef = useRef<AbortController | null>(null);
+  const abortRefs = useRef<AbortController[]>([]);
 
   // Copy state
   const [copyState, setCopyState] = useState<Record<string, "idle" | "copied">>({});
@@ -125,81 +122,73 @@ export default function MainPanel({ view, editingStyleId, onCloseStyleEditor, on
       return;
     }
 
-    // Stage 2: LLM polish (if style has prompt and provider configured)
-    if (!activeStyle.prompt || !activeProvider) {
+    // Stage 2: LLM polish — all providers in parallel
+    const hasLLM = activeStyle.prompt && providers.length > 0;
+    if (!hasLLM) {
       setIsTranslating(false);
       return;
     }
 
-    const polishCard: CardData = {
-      cardId: "polish", providerId: activeProvider.id, providerName: activeProvider.name,
-      providerIcon: "cloud", model: activeProvider.models[0] || "auto",
-      result: "", error: null, translating: true, latency: 0,
-    };
-    const polishStart = Date.now();
-    setCards((prev) => [...prev, polishCard]);
+    const targetLang = /[一-鿿㐀-䶿]/.test(bergamotResult) ? "中文" : "英文";
+    const userMsg = activeStyle.prompt
+      .replace("{source}", text)
+      .replace("{bergamot}", bergamotResult)
+      .replace("{targetLang}", targetLang);
 
-    const controller = new AbortController();
-    abortRef.current = controller;
-    let polishText = "";
+    const controllers: AbortController[] = [];
+    let remaining = providers.length;
 
-    try {
-      const { LLMAdapter } = await import("../../services/llm/adapter");
-      const adapter = new LLMAdapter(activeProvider);
-      const model = activeProvider.models[0] || "gpt-4o-mini";
+    providers.forEach((provider) => {
+      const cardId = `polish-${provider.id}`;
+      const start = Date.now();
+      const card: CardData = {
+        cardId, providerId: provider.id, providerName: provider.name,
+        providerIcon: "cloud", model: provider.models[0] || "auto",
+        result: "", error: null, translating: true, latency: 0,
+      };
+      setCards((prev) => [...prev, card]);
 
-      await adapter.chatStream(
-        {
-          model,
-          messages: [
-            { role: "user", content: (() => {
-              const targetLang = /[一-鿿㐀-䶿]/.test(bergamotResult) ? "中文" : "英文";
-              return activeStyle.prompt
-                .replace("{source}", text)
-                .replace("{bergamot}", bergamotResult)
-                .replace("{targetLang}", targetLang);
-            })() },
-          ],
-          temperature: activeStyle.temperature ?? 0.7,
-          max_tokens: activeStyle.maxTokens ?? 4096,
-        },
-        (delta: string) => {
-          polishText += delta;
-          setCards((prev) => prev.map((c) => c.cardId === "polish"
-            ? { ...c, result: (c.result || "") + delta }
-            : c
-          ));
-        },
-        controller.signal,
-      );
+      const ctrl = new AbortController();
+      controllers.push(ctrl);
+      let text2 = "";
 
-      setCards((prev) => prev.map((c) => c.cardId === "polish"
-        ? { ...c, translating: false, latency: Date.now() - polishStart }
-        : c
-      ));
-      logger.info(`[Polish] 完成 chars=${polishText.length} latency=${Date.now() - polishStart}ms\n  result: ${polishText.slice(0, 500)}`);
-      // Record polish history
-      const polishMs = Date.now() - polishStart;
-      const providerName = activeProvider?.name || "本地模型";
-      const modelName = activeProvider?.models[0] || "auto";
-      useHistoryStore.getState().addRecord(makeRecord(text, polishText, providerName, modelName, polishMs));
-    } catch (e: any) {
-      if (e?.name !== "AbortError") {
-        setCards((prev) => prev.map((c) => c.cardId === "polish"
-          ? { ...c, error: e?.message || "润色失败", translating: false }
-          : c
-        ));
-      }
-    } finally {
-      abortRef.current = null;
-      setIsTranslating(false);
-    }
-  }, [activeStyle, activeProvider]);
+      (async () => {
+        try {
+          const { LLMAdapter } = await import("../../services/llm/adapter");
+          const adapter = new LLMAdapter(provider);
+          await adapter.chatStream(
+            { model: provider.models[0] || "gpt-4o-mini", messages: [{ role: "user", content: userMsg }],
+              temperature: activeStyle.temperature ?? 0.7, max_tokens: activeStyle.maxTokens ?? 4096 },
+            (delta: string) => {
+              text2 += delta;
+              setCards((prev) => prev.map((c) => c.cardId === cardId
+                ? { ...c, result: (c.result || "") + delta } : c));
+            },
+            ctrl.signal,
+          );
+          setCards((prev) => prev.map((c) => c.cardId === cardId
+            ? { ...c, translating: false, latency: Date.now() - start } : c));
+          logger.info(`[Polish:${provider.id}] 完成 chars=${text2.length} latency=${Date.now() - start}ms\n  result: ${text2.slice(0, 300)}`);
+          useHistoryStore.getState().addRecord(makeRecord(text, text2, provider.name, provider.models[0] || "auto", Date.now() - start));
+        } catch (e: any) {
+          if (e?.name !== "AbortError") {
+            setCards((prev) => prev.map((c) => c.cardId === cardId
+              ? { ...c, error: e?.message || "润色失败", translating: false } : c));
+          }
+        } finally {
+          remaining--;
+          if (remaining <= 0) setIsTranslating(false);
+        }
+      })();
+    });
+
+    abortRefs.current = controllers;
+  }, [activeStyle]);
 
   // ---- Stop ----
   const handleStop = useCallback(() => {
-    abortRef.current?.abort();
-    abortRef.current = null;
+    abortRefs.current.forEach((c) => c.abort());
+    abortRefs.current = [];
     setIsTranslating(false);
     setCards((prev) => prev.map((c) => c.translating ? { ...c, translating: false } : c));
   }, []);
@@ -209,7 +198,7 @@ export default function MainPanel({ view, editingStyleId, onCloseStyleEditor, on
     setCards([]);
   }, []);
 
-  const polishOn = !!(activeStyle.prompt && activeProvider);
+  const polishOn = !!(activeStyle.prompt && providers.length > 0);
 
   return (
     <div className="flex flex-col h-full bg-lexi-bg">
@@ -231,9 +220,8 @@ export default function MainPanel({ view, editingStyleId, onCloseStyleEditor, on
             <span className="text-lexi-border">|</span>
             {polishOn ? (
               <>
-                <span>{activeProvider.name}</span>
-                <span className="text-lexi-text-muted/60">{activeProvider.models[0] || "auto"}</span>
-                {isTranslating && cards.some((c) => c.cardId === "polish" && c.translating) && (
+                <span>{providers.length} 个 API</span>
+                {isTranslating && cards.some((c) => c.translating) && (
                   <span className="flex items-center gap-1 text-lexi-accent">
                     <Loader2 size={10} className="animate-spin" /> 润色中...
                   </span>
