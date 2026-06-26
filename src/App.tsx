@@ -147,7 +147,6 @@ function App() {
           onSelectTranslation={goToTranslation}
           onOpenHistory={goToHistory}
           onOpenSettings={goToSettings}
-          onNewStyle={() => {}}
           onEditStyle={(id) => setEditingStyleId(id)}
         />
         <div className="flex-1 min-w-0">

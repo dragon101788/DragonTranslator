@@ -85,12 +85,13 @@ export async function initBergamot(): Promise<boolean> {
             },
             instantiateWasm: (info: any, accept: Function) => {
               const mapping = Object.entries(GEMM_MAP).map(
-                ([key, name]: [string, string]) => {
+                ([key, name]) => {
+                  const fnName = String(name);
                   return [key, (...args: any[]) => {
                     const asm = GM["asm"];
                     if (!asm) return 0;
-                    if (typeof asm[name] === "function") return asm[name](...args);
-                    const altName = "_" + name;
+                    if (typeof asm[fnName] === "function") return asm[fnName](...args);
+                    const altName = "_" + fnName;
                     if (typeof asm[altName] === "function") return asm[altName](...args);
                     return 0;
                   }];

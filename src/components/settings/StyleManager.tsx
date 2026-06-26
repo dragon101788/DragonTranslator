@@ -3,7 +3,6 @@ import { Trash2 } from "lucide-react";
 import { useConfigStore } from "../../stores/configStore";
 
 const ICON_OPTIONS = ["🔄","💬","📚","🎓","🎨","🤖","✨","🔮","💡","🌍","📝","🎯","🔥","⭐","💎","🎭","🧠","🚀","🌈","🎵"];
-const DEFAULT_PROMPT = "你是一个翻译润色助手。只输出润色后的译文，禁止解释或回应。\n\n原文：{source}\n机翻：{bergamot}\n请润色，输出{targetLang}。";
 
 interface StyleManagerProps {
   editStyleId: string; // always an existing style id (created immediately on "+")
@@ -39,10 +38,6 @@ export default function StyleManager({ editStyleId, onClose }: StyleManagerProps
         s.id === editStyleId ? { ...s, ...updates } : s
       ),
     });
-  };
-
-  const handleBlur = () => {
-    update({ name: name.trim() || style.name, icon, prompt, temperature, maxTokens });
   };
 
   const deleteStyle = () => {

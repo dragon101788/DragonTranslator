@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import {
-  Languages, History, Settings as SettingsIcon, ChevronLeft, ChevronRight,
+  History, Settings as SettingsIcon, ChevronLeft, ChevronRight,
   Plus, Trash2, Edit3,
 } from "lucide-react";
 import { useConfigStore } from "../../stores/configStore";
@@ -12,13 +12,12 @@ interface SidebarProps {
   onSelectTranslation: () => void;
   onOpenHistory?: () => void;
   onOpenSettings?: () => void;
-  onNewStyle: () => void;
   onEditStyle: (id: string) => void;
 }
 
 export default function Sidebar({
   activeView, onSelectTranslation, onOpenHistory, onOpenSettings,
-  onNewStyle, onEditStyle,
+  onEditStyle,
 }: SidebarProps) {
   const polishStyles = useConfigStore((s) => s.settings.polishStyles);
   const activeStyleId = useConfigStore((s) => s.settings.activeStyleId);
