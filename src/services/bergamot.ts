@@ -2,18 +2,11 @@ import { logger } from "./logger";
 
 let ready = false;
 let initFailed = false;
-let M: any = null;
-let service: any = null;
-const models: Map<string, any> = new Map();
+let worker: any = null;
 
-// Persistent WASM objects — allocate ONCE, reuse forever.
-// translate() caches internal pointers to these; recreating them corrupts output.
-let persistentInput: any = null;
-let persistentOpts: any = null;
-
-const FILES: Record<string, { model: string; lex: string; vocab: string }> = {
-  enzh: { model: "model.enzh.intgemm.alphas.bin", lex: "lex.50.50.enzh.s2t.bin", vocab: "vocab.enzh.spm" },
-  zhen: { model: "model.zhen.intgemm.alphas.bin", lex: "lex.50.50.zhen.s2t.bin", vocab: "vocab.zhen.spm" },
+const FILES: Record<string, { from: string; to: string; model: string; lex: string; vocab: string }> = {
+  enzh: { from: "en", to: "zh", model: "model.enzh.intgemm.alphas.bin", lex: "lex.50.50.enzh.s2t.bin", vocab: "vocab.enzh.spm" },
+  zhen: { from: "zh", to: "en", model: "model.zhen.intgemm.alphas.bin", lex: "lex.50.50.zhen.s2t.bin", vocab: "vocab.zhen.spm" },
 };
 
 export async function initBergamot(): Promise<boolean> {
@@ -22,72 +15,119 @@ export async function initBergamot(): Promise<boolean> {
 
   try {
     logger.info("Bergamot: 正在加载 WASM 引擎...");
-
     const base = "/bergamot/";
-    const [wasmResp, jsResp] = await Promise.all([
+
+    // 1. Fetch all resources
+    const [wasmResp, glueResp, wrapResp] = await Promise.all([
       fetch(base + "bergamot-translator-worker.wasm"),
       fetch(base + "bergamot-translator-worker.js"),
+      fetch(base + "translator-worker.js"),
     ]);
-    if (!wasmResp.ok || !jsResp.ok) { initFailed = true; logger.warn("Bergamot: WASM 文件未找到"); return false; }
+    if (!wasmResp.ok || !glueResp.ok || !wrapResp.ok) {
+      initFailed = true;
+      logger.warn("Bergamot: 资源文件未找到 (WASM/JS)");
+      return false;
+    }
     const wasmBinary = await wasmResp.arrayBuffer();
-    const workerJs = await jsResp.text();
+    const glueJs = await glueResp.text();
+    const wrapJs = await wrapResp.text();
 
-    const GEMM_FB: Record<string, string> = {
-      int8_prepare_a: "_int8PrepareAFallback", int8_prepare_b: "_int8PrepareBFallback",
-      int8_prepare_b_from_transposed: "_int8PrepareBFromTransposedFallback",
-      int8_prepare_b_from_quantized_transposed: "_int8PrepareBFromQuantizedTransposedFallback",
-      int8_prepare_bias: "_int8PrepareBiasFallback", int8_multiply_and_add_bias: "_int8MultiplyAndAddBiasFallback",
-      int8_select_columns_of_b: "_int8SelectColumnsOfBFallback",
+    // 2. Mock importScripts for main thread
+    const origImportScripts = (self as any).importScripts;
+    (self as any).importScripts = function (_path: string) {
+      (0, eval)(glueJs);
     };
-    const gemmStubs: Record<string, Function> = {};
-    for (const [k, v] of Object.entries(GEMM_FB)) {
-      gemmStubs[k] = (...a: any[]) => { const x = (globalThis as any).Module; return x?.asm?.[v] ? x.asm[v](...a) : 0; };
+
+    // 3. Eval wrapper + expose BergamotTranslatorWorker class to self
+    (0, eval)(wrapJs + ";\nself._BWT = BergamotTranslatorWorker;\n");
+    const BWT = (self as any)._BWT;
+    if (!BWT) throw new Error("BergamotTranslatorWorker 类未定义");
+
+    // Restore original importScripts if any
+    if (origImportScripts !== undefined) {
+      (self as any).importScripts = origImportScripts;
     }
 
-    await new Promise<void>((resolve, reject) => {
-      (globalThis as any).Module = {
-        wasmBinary,
-        onRuntimeInitialized: () => resolve(),
-        print: () => {},
-        printErr: () => {},
-        instantiateWasm: (info: any, accept: Function) => {
-          info.wasm_gemm = gemmStubs;
-          WebAssembly.instantiate(wasmBinary, info).then(r => accept(r.instance)).catch(reject);
-          return {};
-        },
-      };
-      try { (0, eval)(workerJs); } catch (e) { reject(e); }
-    });
+    // 4. Override loadModule to use pre-loaded WASM binary instead of streaming fetch
+    const GEMM_MAP = BWT.GEMM_TO_FALLBACK_FUNCTIONS_MAP;
+    BWT.prototype.loadModule = function () {
+      return new Promise<any>((resolve, reject) => {
+        const GM = (globalThis as any).Module;
+        Object.assign(GM, {
+          wasmBinary,
+          onRuntimeInitialized: () => {
+            // Must resolve with Module — BergamotTranslatorWorker stores it as this.module
+            resolve(GM);
+          },
+          instantiateWasm: (info: any, accept: Function) => {
+            // Setup intgemm fallbacks with dual naming (with/without underscore)
+            const mapping = Object.entries(GEMM_MAP).map(
+              ([key, name]: [string, string]) => {
+                return [key, (...args: any[]) => {
+                  const asm = GM["asm"];
+                  if (!asm) return 0;
+                  if (typeof asm[name] === "function") return asm[name](...args);
+                  const altName = "_" + name;
+                  if (typeof asm[altName] === "function") return asm[altName](...args);
+                  return 0;
+                }];
+              }
+            );
+            (info as any)["wasm_gemm"] = Object.fromEntries(mapping);
+            WebAssembly.instantiate(wasmBinary, info)
+              .then((r) => accept(r.instance)).catch(reject);
+            return {};
+          },
+        });
+        (self as any).importScripts("./bergamot-translator-worker.js");
+      });
+    };
 
-    M = (globalThis as any).Module;
-    service = new M.BlockingService({ cacheSize: 0 });
+    // 5. Create worker instance and initialize
+    worker = new BWT({ cacheSize: 0 });
+    await worker.initialize({ cacheSize: 0 });
+    logger.info("Bergamot: WASM 引擎初始化完成");
 
-    // Allocate persistent I/O objects ONCE — BlockingService.translate() keeps
-    // internal references to their WASM memory addresses.
-    persistentInput = new M.VectorString();
-    persistentOpts = new M.VectorResponseOptions();
-
+    // 6. Load translation models
     let loaded = 0;
     for (const [dir, files] of Object.entries(FILES)) {
       try {
         const p = base + dir + "/";
-        const [mr, lr, vr] = await Promise.all([fetch(p + files.model), fetch(p + files.lex), fetch(p + files.vocab)]);
+        const [mr, lr, vr] = await Promise.all([
+          fetch(p + files.model),
+          fetch(p + files.lex),
+          fetch(p + files.vocab),
+        ]);
         if (!mr.ok) continue;
-        const [mb, lb, vb] = await Promise.all([mr.arrayBuffer(), lr.ok ? lr.arrayBuffer() : new ArrayBuffer(0), vr.ok ? vr.arrayBuffer() : new ArrayBuffer(0)]);
-        const a = (b: ArrayBuffer, n: number) => { const m = new M.AlignedMemory(b.byteLength, n); m.getByteArrayView().set(new Int8Array(b)); return m; };
-        const vl = new M.AlignedMemoryList(); vl.push_back(a(vb, 64));
-        const cfg = ["beam-size: 1","normalize: 1.0","alignment: soft","max-length-break: 128","mini-batch-words: 1024","workspace: 256","max-length-factor: 2.0","skip-cost: true","gemm-precision: int8shiftAlphaAll"].join("\n");
-        models.set(dir, new M.TranslationModel(cfg, a(mb, 256), lb.byteLength > 0 ? a(lb, 64) : new M.AlignedMemory(0, 64), vl, null));
+        const [mb, lb, vb] = await Promise.all([
+          mr.arrayBuffer(),
+          lr.ok ? lr.arrayBuffer() : new ArrayBuffer(0),
+          vr.ok ? vr.arrayBuffer() : new ArrayBuffer(0),
+        ]);
+        await worker.loadTranslationModel(
+          { from: files.from, to: files.to },
+          { model: mb, shortlist: lb, vocabs: [vb], config: {} }
+        );
         loaded++;
         logger.info(`Bergamot: ${dir} 模型加载成功`);
-      } catch (e: any) { logger.warn(`Bergamot: ${dir} 加载失败: ${e?.message || e}`); }
+      } catch (e: any) {
+        logger.warn(`Bergamot: ${dir} 加载失败: ${e?.message || e}`);
+      }
     }
 
-    if (loaded === 0) { initFailed = true; logger.warn("Bergamot: 无可用模型"); return false; }
+    if (loaded === 0) {
+      initFailed = true;
+      logger.warn("Bergamot: 无可用模型");
+      return false;
+    }
     ready = true;
     logger.info("Bergamot: 初始化完成");
     return true;
-  } catch (e: any) { initFailed = true; logger.warn(`Bergamot: 初始化失败: ${e?.message || e}`); return false; }
+  } catch (e: any) {
+    initFailed = true;
+    logger.warn(`Bergamot: 初始化失败: ${e?.message || e}`);
+    return false;
+  }
 }
 
 export async function translateBergamot(text: string): Promise<string> {
@@ -98,34 +138,20 @@ export async function translateBergamot(text: string): Promise<string> {
   if (!text.trim()) return "";
 
   const dir = /[一-鿿]/.test(text) ? "zhen" : "enzh";
-  const model = models.get(dir);
-  if (!model) throw new Error(`模型未加载: ${dir}`);
+  const from = dir === "enzh" ? "en" : "zh";
+  const to = dir === "enzh" ? "zh" : "en";
 
-  // SIMPLEST approach: new operator for every call, but keep OLD objects
-  // alive via a growing _all array so V8 never GCs any WASM backing memory.
-  // Once WASM heap pages are allocated they don't shrink, so this only costs
-  // a few bytes per call (the JS wrapper object, not the WASM data).
-  const input = new M.VectorString();
-  input.push_back(text);
-  const opts = new M.VectorResponseOptions();
-  _all.push(input, opts);
-
-  const out = service.translate(model, input, opts);
-  let result = "";
   try {
-    if (out.size() > 0) {
-      result = out.get(0).getTranslatedText() || "";
-    }
-  } catch (e) {
-    logger.warn(`Bergamot: 读取结果异常: ${e}`);
+    const responses = await worker.translate({
+      models: [{ from, to }],
+      texts: [{ text, html: false, qualityScores: false }],
+    });
+    return responses[0]?.target?.text || "";
+  } catch (e: any) {
+    logger.warn(`Bergamot: 翻译失败: ${e?.message || e}`);
+    throw e;
   }
-
-  // Throttle: don't let _all grow unbounded.  Keep last 10.
-  while (_all.length > 20) _all.shift();
-  return result;
 }
-
-const _all: any[] = [];
 
 export function isBergamotReady(): boolean {
   return ready;
