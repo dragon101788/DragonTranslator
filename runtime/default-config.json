@@ -24,10 +24,8 @@
       "cacheSize": 0,
       "direction": "auto"
     },
-    "polishStyles": [
-      { "id": "plain", "name": "直接翻译", "icon": "🔄", "prompt": "" }
-    ],
-    "activeStyleId": "plain",
+    "polishStyles": [],
+    "activeStyleId": null,
     "localModel": {
       "enabled": true,
       "port": 5158,

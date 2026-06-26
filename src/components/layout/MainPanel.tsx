@@ -51,7 +51,7 @@ export default function MainPanel({ view, editingStyleId, onCloseStyleEditor, on
   const settings = useConfigStore((s) => s.settings);
   const tts = useTTS();
 
-  const activeStyle = settings.polishStyles.find((s) => s.id === settings.activeStyleId) || settings.polishStyles[0];
+  const activeStyle = settings.activeStyleId ? settings.polishStyles.find((s) => s.id === settings.activeStyleId) || null : null;
   const providers = useConfigStore((s) => s.providers);
 
   // ---- Cards state ----
@@ -123,14 +123,14 @@ export default function MainPanel({ view, editingStyleId, onCloseStyleEditor, on
     }
 
     // Stage 2: LLM polish — all providers in parallel
-    const hasLLM = activeStyle.prompt && providers.length > 0;
+    const hasLLM = !!(activeStyle?.prompt && providers.length > 0);
     if (!hasLLM) {
       setIsTranslating(false);
       return;
     }
 
     const targetLang = /[一-鿿㐀-䶿]/.test(bergamotResult) ? "中文" : "英文";
-    const userMsg = activeStyle.prompt
+    const userMsg = (activeStyle?.prompt || "")
       .replace("{source}", text)
       .replace("{bergamot}", bergamotResult)
       .replace("{targetLang}", targetLang);
@@ -158,7 +158,7 @@ export default function MainPanel({ view, editingStyleId, onCloseStyleEditor, on
           const adapter = new LLMAdapter(provider);
           await adapter.chatStream(
             { model: provider.models[0] || "gpt-4o-mini", messages: [{ role: "user", content: userMsg }],
-              temperature: activeStyle.temperature ?? 0.7, max_tokens: activeStyle.maxTokens ?? 4096 },
+              temperature: activeStyle?.temperature ?? 0.7, max_tokens: activeStyle?.maxTokens ?? 4096 },
             (delta: string) => {
               text2 += delta;
               setCards((prev) => prev.map((c) => c.cardId === cardId
@@ -198,7 +198,7 @@ export default function MainPanel({ view, editingStyleId, onCloseStyleEditor, on
     setCards([]);
   }, []);
 
-  const polishOn = !!(activeStyle.prompt && providers.length > 0);
+  const polishOn = !!(activeStyle?.prompt && providers.length > 0);
 
   return (
     <div className="flex flex-col h-full bg-lexi-bg">
@@ -209,14 +209,16 @@ export default function MainPanel({ view, editingStyleId, onCloseStyleEditor, on
         />
       )}
       {editingStyleId === null && view === "history" && <HistoryPanel onClose={onBack} />}
-      {editingStyleId === null && view === "settings" && <SettingsDialog onClose={onBack} />}
+      {editingStyleId === null && view === "settings" && (
+        <SettingsDialog onClose={onBack} defaultTab={activeStyle?.prompt ? undefined : "bergamot"} />
+      )}
 
       {editingStyleId === null && view === "translation" && (
         <div className="flex flex-col h-full min-h-0 overflow-y-auto pt-4">
           {/* Status bar */}
           <div className="flex items-center gap-2 px-5 py-1.5 text-xs text-lexi-text-muted border-b border-lexi-border/50">
-            <span>{activeStyle.icon}</span>
-            <span className="font-medium text-lexi-text">{activeStyle.name}</span>
+            <span>{activeStyle?.icon || "🔄"}</span>
+            <span className="font-medium text-lexi-text">{activeStyle?.name || "直接翻译"}</span>
             <span className="text-lexi-border">|</span>
             {polishOn ? (
               <>

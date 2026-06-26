@@ -44,43 +44,55 @@ export default function Sidebar({
     };
   }, [MIN_W, MAX_W]);
 
+  const selectDirect = () => {
+    updateSettings({ activeStyleId: null });
+    onSelectTranslation();
+  };
+
   const selectStyle = (id: string) => {
     updateSettings({ activeStyleId: id });
     onSelectTranslation();
   };
 
   const deleteStyle = (id: string) => {
-    if (polishStyles.length <= 1) return;
     const newStyles = polishStyles.filter((s) => s.id !== id);
-    const newActiveId = activeStyleId === id ? newStyles[0].id : activeStyleId;
+    const newActiveId = activeStyleId === id ? null : activeStyleId;
     updateSettings({ polishStyles: newStyles, activeStyleId: newActiveId });
   };
 
-  const navItems = [
-    { key: "translation" as const, icon: <Languages size={18} />, label: "翻译", onClick: onSelectTranslation },
-    { key: "history" as const, icon: <History size={18} />, label: "历史", onClick: onOpenHistory || (() => {}) },
-    { key: "settings" as const, icon: <SettingsIcon size={18} />, label: "设置", onClick: onOpenSettings || (() => {}) },
-  ];
+  const isDirect = activeStyleId === null;
 
   return (
     <div className="flex flex-col bg-lexi-card border-r border-lexi-border relative"
       style={{ width: compact ? (width < 80 ? 48 : width) : width }}>
       {/* Nav */}
       <div className="py-3 px-2 space-y-1">
-        {navItems.map((item) => (
-          <button key={item.key} onClick={item.onClick} title={compact ? item.label : undefined}
-            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
-              activeView === item.key ? "bg-lexi-accent/20 text-lexi-accent" : "text-lexi-text-muted hover:bg-lexi-hover hover:text-lexi-text"
-            }`}>
-            <span className="flex-shrink-0">{item.icon}</span>
-            {!compact && <span className="truncate">{item.label}</span>}
-          </button>
-        ))}
+        <button onClick={selectDirect} title={compact ? "直接翻译" : undefined}
+          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
+            isDirect && activeView === "translation" ? "bg-lexi-accent/20 text-lexi-accent" : "text-lexi-text-muted hover:bg-lexi-hover hover:text-lexi-text"
+          }`}>
+          <span className="flex-shrink-0 text-base">🔄</span>
+          {!compact && <span className="truncate">直接翻译</span>}
+        </button>
+        <button onClick={onOpenHistory || (() => {})} title={compact ? "历史" : undefined}
+          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
+            activeView === "history" ? "bg-lexi-accent/20 text-lexi-accent" : "text-lexi-text-muted hover:bg-lexi-hover hover:text-lexi-text"
+          }`}>
+          <span className="flex-shrink-0"><History size={18} /></span>
+          {!compact && <span className="truncate">历史</span>}
+        </button>
+        <button onClick={onOpenSettings || (() => {})} title={compact ? "设置" : undefined}
+          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
+            activeView === "settings" ? "bg-lexi-accent/20 text-lexi-accent" : "text-lexi-text-muted hover:bg-lexi-hover hover:text-lexi-text"
+          }`}>
+          <span className="flex-shrink-0"><SettingsIcon size={18} /></span>
+          {!compact && <span className="truncate">设置</span>}
+        </button>
       </div>
 
       <div className="mx-3 border-t border-lexi-border" />
 
-      {/* Style list */}
+      {/* Polish styles */}
       <div className="flex-1 py-3 px-2 space-y-1 overflow-y-auto">
         {!compact && (
           <div className="flex items-center justify-between px-3 py-1">
@@ -89,6 +101,9 @@ export default function Sidebar({
               <Plus size={14} />
             </button>
           </div>
+        )}
+        {polishStyles.length === 0 && !compact && (
+          <p className="text-xs text-lexi-text-muted px-3 py-2">暂无风格，点击 + 创建</p>
         )}
         {polishStyles.map((s) => (
           <div key={s.id} className="group relative">
@@ -99,8 +114,8 @@ export default function Sidebar({
               }`}>
               <span className="flex-shrink-0 text-base">{s.icon}</span>
               {!compact && <span className="truncate">{s.name}</span>}
-              {!compact && s.prompt && (
-                <span className="w-1.5 h-1.5 rounded-full bg-lexi-accent/60 flex-shrink-0 ml-auto" title="LLM 润色" />
+              {!compact && (
+                <span className="w-1.5 h-1.5 rounded-full bg-lexi-accent/60 flex-shrink-0 ml-auto" />
               )}
             </button>
             {!compact && (
@@ -108,11 +123,9 @@ export default function Sidebar({
                 <button onClick={() => onEditStyle(s.id)} className="p-1 rounded hover:bg-lexi-hover text-lexi-text-muted">
                   <Edit3 size={12} />
                 </button>
-                {polishStyles.length > 1 && (
-                  <button onClick={() => deleteStyle(s.id)} className="p-1 rounded hover:bg-red-400/10 text-lexi-text-muted hover:text-red-400">
-                    <Trash2 size={12} />
-                  </button>
-                )}
+                <button onClick={() => deleteStyle(s.id)} className="p-1 rounded hover:bg-red-400/10 text-lexi-text-muted hover:text-red-400">
+                  <Trash2 size={12} />
+                </button>
               </div>
             )}
           </div>

@@ -11,6 +11,7 @@ import { useHistoryStore } from "../../stores/historyStore";
 
 interface SettingsDialogProps {
   onClose: () => void;
+  defaultTab?: SettingsTab;
 }
 
 type SettingsTab = "api" | "webdav" | "localModel" | "bergamot" | "shortcut" | "appearance" | "tts" | "debug";
@@ -26,8 +27,8 @@ const TABS: { key: SettingsTab; label: string; icon: React.ReactNode }[] = [
   { key: "debug", label: "调试", icon: <Bug size={16} /> },
 ];
 
-export default function SettingsDialog({ onClose }: SettingsDialogProps) {
-  const [tab, setTab] = useState<SettingsTab>("api");
+export default function SettingsDialog({ onClose, defaultTab }: SettingsDialogProps) {
+  const [tab, setTab] = useState<SettingsTab>(defaultTab || "api");
   const settings = useConfigStore((s) => s.settings);
   const updateSettings = useConfigStore((s) => s.updateSettings);
   const updateWebDAV = useConfigStore((s) => s.updateWebDAV);

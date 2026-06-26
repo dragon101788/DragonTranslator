@@ -16,9 +16,13 @@ export default function HistoryPanel(_props: HistoryPanelProps) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
+  const [filterProvider, setFilterProvider] = useState("");
+
+  const providerNames = [...new Set(records.map((r) => r.providerName).filter(Boolean))].sort();
 
   const filteredRecords = records.filter((r) => {
     if (showFavoritesOnly && !r.isFavorite) return false;
+    if (filterProvider && r.providerName !== filterProvider) return false;
     if (search) {
       const q = search.toLowerCase();
       return (
@@ -71,6 +75,15 @@ export default function HistoryPanel(_props: HistoryPanelProps) {
               className="w-full bg-lexi-input border border-lexi-border rounded-lg pl-9 pr-3 py-2 text-sm text-lexi-text placeholder-lexi-text-muted/40 focus:outline-none focus:ring-1 focus:ring-lexi-accent"
             />
           </div>
+          {providerNames.length > 1 && (
+            <select value={filterProvider} onChange={(e) => setFilterProvider(e.target.value)}
+              className="bg-lexi-input border border-lexi-border rounded-lg px-2 py-2 text-xs text-lexi-text focus:outline-none focus:ring-1 focus:ring-lexi-accent">
+              <option value="">全部提供者</option>
+              {providerNames.map((name) => (
+                <option key={name} value={name}>{name}</option>
+              ))}
+            </select>
+          )}
           <button
             onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
             className={`p-2 rounded-lg transition-colors ${

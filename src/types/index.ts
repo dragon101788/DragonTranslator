@@ -148,10 +148,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
     cacheSize: 0,
     direction: "auto",
   },
-  polishStyles: [
-    { id: "plain", name: "直接翻译", icon: "🔄", prompt: "", temperature: 0.7, maxTokens: 4096 },
-  ],
-  activeStyleId: "plain",
+  polishStyles: [],
+  activeStyleId: null,
   localModel: {
     enabled: true,
     port: 5158,

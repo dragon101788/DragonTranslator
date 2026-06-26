@@ -142,7 +142,6 @@ export default function StyleManager({ editStyleId, onClose }: StyleManagerProps
           {!isNew && existing && (
             <div className="pt-3 border-t border-lexi-border">
               <button onClick={() => { deleteStyle(editStyleId!); onClose(); }}
-                disabled={polishStyles.length <= 1}
                 className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-red-400 hover:bg-red-400/10 disabled:opacity-30">
                 <Trash2 size={14} /> 删除此风格
               </button>
