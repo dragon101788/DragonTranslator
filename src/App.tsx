@@ -142,6 +142,8 @@ function App() {
         <Sidebar
           activeView={view}
           onSelectTranslation={goToTranslation}
+          onOpenHistory={() => setView("history")}
+          onOpenSettings={() => setView("settings")}
         />
         <div className="flex-1 min-w-0">
           <MainPanel

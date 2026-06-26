@@ -4,8 +4,10 @@ import OutputCard from "../translation/OutputCard";
 import SettingsDialog from "../settings/SettingsDialog";
 import HistoryPanel from "./HistoryPanel";
 import { useConfigStore } from "../../stores/configStore";
+import { useHistoryStore } from "../../stores/historyStore";
 import { useTTS } from "../../hooks/useTTS";
 import { logger } from "../../services/logger";
+import type { TranslationRecord } from "../../types";
 import { Loader2, WifiOff } from "lucide-react";
 
 type ViewType = "translation" | "history" | "settings";
@@ -20,6 +22,21 @@ interface CardData {
   error: string | null;
   translating: boolean;
   latency: number;
+}
+
+function makeRecord(source: string, translated: string, provider: string, model: string, latency: number): TranslationRecord {
+  return {
+    id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    sourceText: source,
+    translatedText: translated,
+    sourceLang: /[一-鿿㐀-䶿]/.test(source) ? "中文" : "英文",
+    targetLang: /[一-鿿㐀-䶿]/.test(translated) ? "中文" : "英文",
+    providerName: provider,
+    model,
+    latency,
+    timestamp: Date.now(),
+    isFavorite: false,
+  };
 }
 
 interface MainPanelProps {
@@ -93,6 +110,8 @@ export default function MainPanel({ view, onBack }: MainPanelProps) {
         : c
       ));
       logger.info(`[Bergamot] 完成 chars=${bergamotResult.length} latency=${elapsed}ms`);
+      // Record history
+      useHistoryStore.getState().addRecord(makeRecord(text, bergamotResult, "离线翻译", "Bergamot NMT", elapsed));
     } catch (e: any) {
       setCards((prev) => prev.map((c) => c.cardId === "bergamot"
         ? { ...c, error: e?.message || "翻译失败", translating: false }
@@ -155,6 +174,11 @@ export default function MainPanel({ view, onBack }: MainPanelProps) {
         : c
       ));
       logger.info(`[Polish] 完成 chars=${polishText.length} latency=${Date.now() - polishStart}ms\n  result: ${polishText.slice(0, 500)}`);
+      // Record polish history
+      const polishMs = Date.now() - polishStart;
+      const providerName = activeProvider?.name || "本地模型";
+      const modelName = activeProvider?.models[0] || "auto";
+      useHistoryStore.getState().addRecord(makeRecord(text, polishText, providerName, modelName, polishMs));
     } catch (e: any) {
       if (e?.name !== "AbortError") {
         setCards((prev) => prev.map((c) => c.cardId === "polish"
