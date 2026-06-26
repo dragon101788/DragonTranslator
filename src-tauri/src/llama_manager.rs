@@ -18,7 +18,16 @@ const DEFAULT_PORT: u16 = 5158;
 // ---------------------------------------------------------------------------
 
 fn llamafile_path() -> String {
-    crate::paths::runtime_dir().join(LLAMAFILE_EXE).to_string_lossy().to_string()
+    // Try reading llamafile name from llama-config.json, fall back to default
+    let exe_name = read_llama_config_llamafile().unwrap_or_else(|| LLAMAFILE_EXE.to_string());
+    crate::paths::runtime_dir().join(&exe_name).to_string_lossy().to_string()
+}
+
+fn read_llama_config_llamafile() -> Option<String> {
+    let config_path = crate::paths::runtime_dir().join("llama-config.json");
+    let data = std::fs::read_to_string(&config_path).ok()?;
+    let json: serde_json::Value = serde_json::from_str(&data).ok()?;
+    json.get("llamafile")?.as_str().map(|s| s.to_string())
 }
 
 fn log_file() -> String {

@@ -15,60 +15,41 @@ interface LocalModelStatus {
   llamafile: string;
 }
 
-// ---- Curated model catalog ----
+// ---- Runtime-loaded model catalog ----
 
-const AVAILABLE_MODELS: CuratedModel[] = [
-  {
-    id: "hy-mt1.5-1.8b",
-    name: "HY-MT1.5 1.8B (Q4_K_M) ⭐",
-    description: "腾讯翻译专用模型，33语言+5方言，质量匹敌 Gemini 3.0 Pro",
-    size_mb: 1000,
-    repo: "tencent/HY-MT1.5-1.8B-GGUF",
-    filename: "HY-MT1.5-1.8B-Q4_K_M.gguf",
-    url_path: "HY-MT1.5-1.8B-Q4_K_M.gguf",
-  },
-  {
-    id: "translategemma-4b",
-    name: "TranslateGemma 4B (Q4_K_M)",
-    description: "Google 翻译专用模型，多语言高质量",
-    size_mb: 2500,
-    repo: "SandLogicTechnologies/translategemma-4b-it-GGUF",
-    filename: "translategemma-4b_Q4_K_M.gguf",
-    url_path: "translategemma-4b_Q4_K_M.gguf",
-  },
-  {
-    id: "llama3.2-1b",
-    name: "Llama 3.2 1B (Q4_K_M)",
-    description: "Meta 小型高性能指令模型",
-    size_mb: 810,
-    repo: "bartowski/Llama-3.2-1B-Instruct-GGUF",
-    filename: "Llama-3.2-1B-Instruct-Q4_K_M.gguf",
-    url_path: "Llama-3.2-1B-Instruct-Q4_K_M.gguf",
-  },
-  {
-    id: "qwen3-0.6b",
-    name: "Qwen3 0.6B (Q4_K_M)",
-    description: "阿里 Qwen3 新一代，支持 119 语言，超轻量极速",
-    size_mb: 480,
-    repo: "bartowski/Qwen_Qwen3-0.6B-GGUF",
-    filename: "Qwen_Qwen3-0.6B-Q4_K_M.gguf",
-    url_path: "Qwen_Qwen3-0.6B-Q4_K_M.gguf",
-  },
-  {
-    id: "phi-3-mini",
-    name: "Phi-3 Mini 4B (Q4_K_M)",
-    description: "微软微型模型中的素质天花板",
-    size_mb: 2390,
-    repo: "bartowski/Phi-3-mini-4k-instruct-GGUF",
-    filename: "Phi-3-mini-4k-instruct-Q4_K_M.gguf",
-    url_path: "Phi-3-mini-4k-instruct-Q4_K_M.gguf",
-  },
-];
+type MirrorEntry = { label: string; base: string };
 
-const BASE_URLS = [
-  { label: "HuggingFace", base: "https://huggingface.co" },
-  { label: "hf-mirror.com (国内镜像)", base: "https://hf-mirror.com" },
-];
+interface ModelsCatalog {
+  mirrors: MirrorEntry[];
+  models: CuratedModel[];
+}
+
+const FALLBACK_CATALOG: ModelsCatalog = {
+  mirrors: [
+    { label: "HuggingFace", base: "https://huggingface.co" },
+    { label: "hf-mirror.com (国内镜像)", base: "https://hf-mirror.com" },
+  ],
+  models: [
+    {
+      id: "hy-mt1.5-1.8b", name: "HY-MT1.5 1.8B (Q4_K_M) ⭐",
+      description: "腾讯翻译专用模型，33语言+5方言", size_mb: 1000,
+      repo: "tencent/HY-MT1.5-1.8B-GGUF", filename: "HY-MT1.5-1.8B-Q4_K_M.gguf", url_path: "HY-MT1.5-1.8B-Q4_K_M.gguf",
+    },
+    {
+      id: "qwen3-0.6b", name: "Qwen3 0.6B (Q4_K_M)",
+      description: "阿里 Qwen3，超轻量极速", size_mb: 480,
+      repo: "bartowski/Qwen_Qwen3-0.6B-GGUF", filename: "Qwen_Qwen3-0.6B-Q4_K_M.gguf", url_path: "Qwen_Qwen3-0.6B-Q4_K_M.gguf",
+    },
+  ],
+};
+
+async function loadCatalog(): Promise<ModelsCatalog> {
+  try {
+    const resp = await fetch("/llama-config.json");
+    if (resp.ok) return await resp.json();
+  } catch { /* fall through to fallback */ }
+  return FALLBACK_CATALOG;
+}
 
 // ---- Helpers ----
 
@@ -109,6 +90,15 @@ export default function LocalModelTab() {
   const [showCustomForm, setShowCustomForm] = useState(false);
   const [customUrl, setCustomUrl] = useState("");
   const [customName, setCustomName] = useState("");
+
+  // ---- Load catalog from runtime -----
+  const [catalog, setCatalog] = useState<ModelsCatalog>(FALLBACK_CATALOG);
+  useEffect(() => {
+    loadCatalog().then(setCatalog);
+  }, []);
+
+  const mirrors = catalog.mirrors;
+  const availableModels = catalog.models;
 
   // ---- Progress event listeners ----
   useEffect(() => {
@@ -264,7 +254,7 @@ export default function LocalModelTab() {
     setDlSuccess(null);
     setProgress(null);
     try {
-      const base = BASE_URLS[mirrorIdx].base;
+      const base = mirrors[mirrorIdx]?.base || mirrors[0].base;
       const url = `${base}/${model.repo}/resolve/main/${model.url_path}`;
       const { invoke } = await import("@tauri-apps/api/core");
       await invoke<string>("download_model", { url, filename: model.filename });
@@ -436,7 +426,7 @@ export default function LocalModelTab() {
           onChange={(e) => setMirrorIdx(parseInt(e.target.value))}
           className="w-full bg-lexi-input border border-lexi-border rounded-lg px-3 py-2 text-sm text-lexi-text focus:outline-none focus:ring-1 focus:ring-lexi-accent"
         >
-          {BASE_URLS.map((b, i) => (
+          {mirrors.map((b, i) => (
             <option key={i} value={i}>{b.label}</option>
           ))}
         </select>
@@ -504,7 +494,7 @@ export default function LocalModelTab() {
       <div>
         <h4 className="text-sm font-medium text-lexi-text mb-2">可下载模型</h4>
         <div className="space-y-2">
-          {AVAILABLE_MODELS.map((model) => {
+          {availableModels.map((model) => {
             const installed = downloadedModels.some((d) => d.name === model.filename);
             const isCurrentDownload = downloading === model.id;
             return (

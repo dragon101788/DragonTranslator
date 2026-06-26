@@ -4,36 +4,42 @@ import tailwindcss from "@tailwindcss/vite";
 import fs from "fs";
 import path from "path";
 
-// Serve runtime/default-config.json for browser/dev mode fallback
-function defaultConfigPlugin() {
-  const src = path.resolve(__dirname, "runtime", "default-config.json");
+// Serve runtime/*.json for browser/dev mode fallback
+function runtimeFilesPlugin() {
+  const runtimeDir = path.resolve(__dirname, "runtime");
+  const files = ["default-config.json", "llama-config.json"];
   return {
-    name: "default-config",
+    name: "runtime-files",
     configureServer(server: any) {
-      server.middlewares.use("/default-config.json", (_req: any, res: any) => {
-        try {
-          const data = fs.readFileSync(src, "utf-8");
-          res.setHeader("Content-Type", "application/json");
-          res.end(data);
-        } catch {
-          res.statusCode = 404;
-          res.end("{}");
-        }
-      });
+      for (const file of files) {
+        server.middlewares.use(`/${file}`, (_req: any, res: any) => {
+          try {
+            const data = fs.readFileSync(path.join(runtimeDir, file), "utf-8");
+            res.setHeader("Content-Type", "application/json");
+            res.end(data);
+          } catch {
+            res.statusCode = 404;
+            res.end("{}");
+          }
+        });
+      }
     },
     // For production build: copy to dist/
     writeBundle() {
       const distDir = path.resolve(__dirname, "dist");
-      if (fs.existsSync(src)) {
-        fs.mkdirSync(distDir, { recursive: true });
-        fs.copyFileSync(src, path.join(distDir, "default-config.json"));
+      fs.mkdirSync(distDir, { recursive: true });
+      for (const file of files) {
+        const src = path.join(runtimeDir, file);
+        if (fs.existsSync(src)) {
+          fs.copyFileSync(src, path.join(distDir, file));
+        }
       }
     },
   };
 }
 
 export default defineConfig({
-  plugins: [react(), tailwindcss(), defaultConfigPlugin()],
+  plugins: [react(), tailwindcss(), runtimeFilesPlugin()],
 
   // Prevent Vite from obscuring Rust errors
   clearScreen: false,
