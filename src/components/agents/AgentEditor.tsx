@@ -20,6 +20,7 @@ export default function AgentEditor({ agentId, onClose }: AgentEditorProps) {
   const [icon, setIcon] = useState(agent?.icon ?? "🤖");
   const [description, setDescription] = useState(agent?.description ?? "");
   const [systemPrompt, setSystemPrompt] = useState(agent?.systemPrompt ?? "");
+  const [useBergamot, setUseBergamot] = useState(agent?.useBergamot ?? false);
   const [config, setConfig] = useState<AgentConfig>(
     agent?.config ?? { model: "", temperature: 0.7, maxTokens: 2048 }
   );
@@ -30,6 +31,7 @@ export default function AgentEditor({ agentId, onClose }: AgentEditorProps) {
     setIcon(agent?.icon ?? "🤖");
     setDescription(agent?.description ?? "");
     setSystemPrompt(agent?.systemPrompt ?? "");
+    setUseBergamot(agent?.useBergamot ?? false);
     setConfig(agent?.config ?? { model: "", temperature: 0.7, maxTokens: 2048 });
   }, [agentId, agent?.name, agent?.icon, agent?.description, agent?.systemPrompt, agent?.config]);
 
@@ -45,6 +47,7 @@ export default function AgentEditor({ agentId, onClose }: AgentEditorProps) {
         description: description.trim(),
         systemPrompt: systemPrompt.trim(),
         config,
+        useBergamot,
         createdAt: Date.now(),
         updatedAt: Date.now(),
       });
@@ -58,6 +61,7 @@ export default function AgentEditor({ agentId, onClose }: AgentEditorProps) {
         description: description.trim(),
         systemPrompt: systemPrompt.trim(),
         config,
+        useBergamot,
       });
     }
   }, [name, icon, description, systemPrompt, config, isNew, agentId, addAgent, updateAgent, onClose]);
@@ -71,9 +75,10 @@ export default function AgentEditor({ agentId, onClose }: AgentEditorProps) {
         description: description.trim(),
         systemPrompt: systemPrompt.trim(),
         config,
+        useBergamot,
       });
     }
-  }, [isNew, agentId, name, icon, description, systemPrompt, config, updateAgent]);
+  }, [isNew, agentId, name, icon, description, systemPrompt, useBergamot, config, updateAgent]);
 
   return (
     <div className="flex-1 flex flex-col min-h-0">
@@ -212,6 +217,41 @@ export default function AgentEditor({ agentId, onClose }: AgentEditorProps) {
                 <option value={16384}>16384</option>
               </select>
             </div>
+          </div>
+
+          {/* Bergamot offline toggle */}
+          <div className="flex items-center justify-between p-4 rounded-lg bg-lexi-bg border border-lexi-border">
+            <div>
+              <span className="text-sm text-lexi-text">使用离线翻译</span>
+              <p className="text-xs text-lexi-text-muted mt-0.5">
+                绕过 LLM，使用内置 Bergamot NMT 引擎进行离线快速翻译
+              </p>
+            </div>
+            <button
+              onClick={() => {
+                setUseBergamot(!useBergamot);
+                // Save immediately for toggle (consistent with LocalModelTab pattern)
+                if (!isNew && agentId && name.trim()) {
+                  updateAgent(agentId, {
+                    name: name.trim(),
+                    icon,
+                    description: description.trim(),
+                    systemPrompt: systemPrompt.trim(),
+                    config,
+                    useBergamot: !useBergamot,
+                  });
+                }
+              }}
+              className={`relative w-10 h-5 rounded-full transition-colors flex-shrink-0 ${
+                useBergamot ? "bg-lexi-accent" : "bg-lexi-border"
+              }`}
+            >
+              <span
+                className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform ${
+                  useBergamot ? "left-5" : "left-0.5"
+                }`}
+              />
+            </button>
           </div>
         </div>
 

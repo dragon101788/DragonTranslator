@@ -19,6 +19,11 @@
     "ttsRate": 1.0,
     "ttsAutoRead": false,
     "ttsVoice": {},
+    "bergamot": {
+      "beamSize": 1,
+      "cacheSize": 0,
+      "direction": "auto"
+    },
     "localModel": {
       "enabled": true,
       "port": 5158,

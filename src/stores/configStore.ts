@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { LLMProvider, AppSettings, WebDAVConfig } from "../types";
+import type { LLMProvider, AppSettings, WebDAVConfig, BergamotConfig } from "../types";
 import { DEFAULT_SETTINGS } from "../types";
 
 interface ConfigStore {
@@ -18,6 +18,7 @@ interface ConfigStore {
   // Settings actions
   updateSettings: (updates: Partial<AppSettings>) => void;
   updateWebDAV: (updates: Partial<WebDAVConfig>) => void;
+  updateBergamot: (updates: Partial<BergamotConfig>) => void;
 
   // Bulk
   importAll: (data: {
@@ -81,6 +82,14 @@ export const useConfigStore = create<ConfigStore>((set, get) => ({
       settings: {
         ...state.settings,
         webdav: { ...state.settings.webdav, ...updates },
+      },
+    })),
+
+  updateBergamot: (updates) =>
+    set((state) => ({
+      settings: {
+        ...state.settings,
+        bergamot: { ...state.settings.bergamot, ...updates },
       },
     })),
 

@@ -64,6 +64,8 @@ export interface AppSettings {
   ttsVoice: Record<string, string>; // lang -> voice_name override
   // Logging
   logLevel: "debug" | "info" | "warn" | "error";
+  // Bergamot offline translation
+  bergamot: BergamotConfig;
   // Local model (llamafile)
   localModel: LocalModelConfig;
 }
@@ -72,6 +74,12 @@ export interface LocalModelConfig {
   enabled: boolean;      // auto-start on launch
   port: number;          // llama.cpp API port
   model: string;         // GGUF filename
+}
+
+export interface BergamotConfig {
+  beamSize: number;   // 1-8, beam search width. Higher = better quality, slower
+  cacheSize: number;  // 0-65536, translation cache. Sped up repeated translations
+  direction: "auto" | "enzh" | "zhen";  // auto-detect / en→zh / zh→en
 }
 
 export interface WebDAVConfig {
@@ -130,6 +138,11 @@ export const DEFAULT_SETTINGS: AppSettings = {
   ttsAutoRead: false,
   ttsVoice: {},
   logLevel: "info",
+  bergamot: {
+    beamSize: 1,
+    cacheSize: 0,
+    direction: "auto",
+  },
   localModel: {
     enabled: true,
     port: 5158,
