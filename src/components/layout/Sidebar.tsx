@@ -54,6 +54,17 @@ export default function Sidebar({
     onSelectTranslation();
   };
 
+  const handleNewStyle = () => {
+    const id = `style-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const newStyle = {
+      id, name: "新风格", icon: "🤖",
+      prompt: "你是一个翻译润色助手。只输出润色后的译文，禁止解释或回应。\n\n原文：{source}\n机翻：{bergamot}\n请润色，输出{targetLang}。",
+      temperature: 0.7, maxTokens: 4096,
+    };
+    updateSettings({ polishStyles: [...polishStyles, newStyle] });
+    onEditStyle(id);
+  };
+
   const deleteStyle = (id: string) => {
     const newStyles = polishStyles.filter((s) => s.id !== id);
     const newActiveId = activeStyleId === id ? null : activeStyleId;
@@ -97,7 +108,7 @@ export default function Sidebar({
         {!compact && (
           <div className="flex items-center justify-between px-3 py-1">
             <span className="text-xs text-lexi-text-muted font-medium">风格</span>
-            <button onClick={onNewStyle} className="p-0.5 rounded hover:bg-lexi-hover text-lexi-text-muted hover:text-lexi-text">
+            <button onClick={handleNewStyle} className="p-0.5 rounded hover:bg-lexi-hover text-lexi-text-muted hover:text-lexi-text">
               <Plus size={14} />
             </button>
           </div>

@@ -128,14 +128,16 @@ function App() {
     }
   }, []);
 
-  const goToTranslation = useCallback(() => setView("translation"), []);
+  const goToTranslation = useCallback(() => { setView("translation"); setEditingStyleId(null); }, []);
+  const goToHistory = () => { setView("history"); setEditingStyleId(null); };
+  const goToSettings = () => { setView("settings"); setEditingStyleId(null); };
 
   return (
     <div className="flex flex-col h-screen w-screen bg-lexi-bg overflow-hidden">
       <TitleBar
         onCloseRequest={handleCloseRequest}
-        onOpenHistory={() => setView("history")}
-        onOpenSettings={() => setView("settings")}
+        onOpenHistory={goToHistory}
+        onOpenSettings={goToSettings}
         view={view}
         onBack={goToTranslation}
       />
@@ -143,9 +145,9 @@ function App() {
         <Sidebar
           activeView={view}
           onSelectTranslation={goToTranslation}
-          onOpenHistory={() => setView("history")}
-          onOpenSettings={() => setView("settings")}
-          onNewStyle={() => setEditingStyleId("new")}
+          onOpenHistory={goToHistory}
+          onOpenSettings={goToSettings}
+          onNewStyle={() => {}}
           onEditStyle={(id) => setEditingStyleId(id)}
         />
         <div className="flex-1 min-w-0">

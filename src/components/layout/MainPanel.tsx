@@ -203,10 +203,7 @@ export default function MainPanel({ view, editingStyleId, onCloseStyleEditor, on
   return (
     <div className="flex flex-col h-full bg-lexi-bg">
       {editingStyleId !== null && (
-        <StyleManager
-          editStyleId={editingStyleId === "new" ? null : editingStyleId}
-          onClose={onCloseStyleEditor}
-        />
+        <StyleManager editStyleId={editingStyleId} onClose={onCloseStyleEditor} />
       )}
       {editingStyleId === null && view === "history" && <HistoryPanel onClose={onBack} />}
       {editingStyleId === null && view === "settings" && (
