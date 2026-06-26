@@ -4,8 +4,7 @@ import { useConfigStore } from "../../stores/configStore";
 import type { PolishStyle } from "../../types";
 
 const ICON_OPTIONS = ["🔄","💬","📚","🎓","🎨","🤖","✨","🔮","💡","🌍","📝","🎯","🔥","⭐","💎","🎭","🧠","🚀","🌈","🎵"];
-const DEFAULT_PROMPT = "你是一个翻译润色助手。根据用户提供的原文和机翻结果，将译文改写得更自然流畅。\n只输出润色后的译文，禁止解释、问候、或回应原文内容。";
-const DEFAULT_TEMPLATE = "原文：{source}\n机翻：{bergamot}\n请润色，输出{targetLang}。";
+const DEFAULT_PROMPT = "你是一个翻译润色助手。只输出润色后的译文，禁止解释或回应。\n\n原文：{source}\n机翻：{bergamot}\n请润色，输出{targetLang}。";
 
 interface StyleManagerProps {
   editStyleId: string | null; // null = creating new, string = editing existing
@@ -23,33 +22,35 @@ export default function StyleManager({ editStyleId, onClose }: StyleManagerProps
   const [name, setName] = useState("");
   const [icon, setIcon] = useState("🤖");
   const [prompt, setPrompt] = useState("");
-  const [userTemplate, setUserTemplate] = useState(DEFAULT_TEMPLATE);
+  const [temperature, setTemperature] = useState(0.7);
+  const [maxTokens, setMaxTokens] = useState(4096);
 
   useEffect(() => {
     if (existing) {
       setName(existing.name);
       setIcon(existing.icon);
       setPrompt(existing.prompt);
-      setUserTemplate(existing.userTemplate || DEFAULT_TEMPLATE);
+      setTemperature(existing.temperature ?? 0.7);
+      setMaxTokens(existing.maxTokens ?? 4096);
     } else if (isNew) {
       setName("");
       setIcon("🤖");
       setPrompt(DEFAULT_PROMPT);
-      setUserTemplate(DEFAULT_TEMPLATE);
+      setTemperature(0.7);
+      setMaxTokens(4096);
     }
   }, [editStyleId, existing?.id]);
 
   const save = () => {
     if (!name.trim()) return;
+    const style = { id: "", name: name.trim(), icon, prompt: prompt.trim(), temperature, maxTokens };
     if (isNew) {
-      const id = `style-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-      updateSettings({
-        polishStyles: [...polishStyles, { id, name: name.trim(), icon, prompt: prompt.trim(), userTemplate: userTemplate.trim() }],
-      });
+      style.id = `style-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+      updateSettings({ polishStyles: [...polishStyles, style] });
     } else {
       updateSettings({
         polishStyles: polishStyles.map((s) =>
-          s.id === editStyleId ? { ...s, name: name.trim(), icon, prompt: prompt.trim(), userTemplate: userTemplate.trim() } : s
+          s.id === editStyleId ? { ...s, name: name.trim(), icon, prompt: prompt.trim(), temperature, maxTokens } : s
         ),
       });
     }
@@ -110,12 +111,30 @@ export default function StyleManager({ editStyleId, onClose }: StyleManagerProps
                 placeholder="给 LLM 的系统提示词..."
                 className="w-full bg-lexi-input border border-lexi-border rounded-lg px-3 py-2 text-sm text-lexi-text placeholder-lexi-text-muted/40 focus:outline-none focus:ring-1 focus:ring-lexi-accent resize-none font-mono" />
             </div>
+          </div>
+
+          {/* Temperature + Max Tokens */}
+          <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs text-lexi-text-muted mb-1">
-                消息模板 <span className="text-lexi-text-muted/60">（{'{source}'} {'{bergamot}'} {'{targetLang}'} 为占位符）</span>
-              </label>
-              <textarea value={userTemplate} onChange={(e) => setUserTemplate(e.target.value)} rows={4}
-                className="w-full bg-lexi-input border border-lexi-border rounded-lg px-3 py-2 text-sm text-lexi-text placeholder-lexi-text-muted/40 focus:outline-none focus:ring-1 focus:ring-lexi-accent resize-none font-mono" />
+              <label className="block text-xs text-lexi-text-muted mb-1">温度 ({temperature.toFixed(1)})</label>
+              <input type="range" min="0" max="2" step="0.1" value={temperature}
+                onChange={(e) => setTemperature(parseFloat(e.target.value))}
+                className="w-full accent-lexi-accent" />
+              <div className="flex justify-between text-xs text-lexi-text-muted mt-0.5">
+                <span>精确</span><span>创意</span>
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs text-lexi-text-muted mb-1">最大 Token</label>
+              <select value={maxTokens} onChange={(e) => setMaxTokens(parseInt(e.target.value))}
+                className="w-full bg-lexi-input border border-lexi-border rounded-lg px-3 py-2 text-sm text-lexi-text focus:outline-none focus:ring-1 focus:ring-lexi-accent">
+                <option value={512}>512</option>
+                <option value={1024}>1024</option>
+                <option value={2048}>2048</option>
+                <option value={4096}>4096</option>
+                <option value={8192}>8192</option>
+                <option value={16384}>16384</option>
+              </select>
             </div>
           </div>
 

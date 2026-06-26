@@ -152,15 +152,16 @@ export default function MainPanel({ view, editingStyleId, onCloseStyleEditor, on
         {
           model,
           messages: [
-            { role: "system", content: activeStyle.prompt },
             { role: "user", content: (() => {
               const targetLang = /[一-鿿㐀-䶿]/.test(bergamotResult) ? "中文" : "英文";
-              const tpl = (activeStyle as any).userTemplate || "原文：{source}\n机翻：{bergamot}";
-              return tpl.replace("{source}", text).replace("{bergamot}", bergamotResult).replace("{targetLang}", targetLang).replace("{style}", activeStyle.name);
+              return activeStyle.prompt
+                .replace("{source}", text)
+                .replace("{bergamot}", bergamotResult)
+                .replace("{targetLang}", targetLang);
             })() },
           ],
-          temperature: 0.7,
-          max_tokens: 4096,
+          temperature: activeStyle.temperature ?? 0.7,
+          max_tokens: activeStyle.maxTokens ?? 4096,
         },
         (delta: string) => {
           polishText += delta;

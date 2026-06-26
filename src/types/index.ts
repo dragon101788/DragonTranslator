@@ -68,8 +68,9 @@ export interface PolishStyle {
   id: string;
   name: string;
   icon: string;
-  prompt: string; // system prompt, empty = Bergamot only
-  userTemplate: string; // template for user message. {source} {bergamot} {style} are replaced
+  prompt: string; // 完整提示词模板。空 = 仅 Bergamot
+  temperature: number;
+  maxTokens: number;
 }
 
 export interface CuratedModel {
@@ -148,7 +149,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
     direction: "auto",
   },
   polishStyles: [
-    { id: "plain", name: "直接翻译", icon: "🔄", prompt: "", userTemplate: "原文：{source}\n机翻：{bergamot}\n请润色，输出{targetLang}。" },
+    { id: "plain", name: "直接翻译", icon: "🔄", prompt: "", temperature: 0.7, maxTokens: 4096 },
   ],
   activeStyleId: "plain",
   localModel: {
