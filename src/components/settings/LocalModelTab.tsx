@@ -232,6 +232,8 @@ export default function LocalModelTab() {
       const msg = await invoke<string>("stop_local_model");
       setMessage(msg);
       setIsError(false);
+      // Remove local provider from API list
+      useConfigStore.getState().deleteProvider("local");
       refreshModels();
       const { invoke: inv } = await import("@tauri-apps/api/core");
       const s = await inv<LocalModelStatus>("get_local_model_status", {

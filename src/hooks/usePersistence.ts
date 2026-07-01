@@ -103,10 +103,6 @@ async function loadFromFile(): Promise<boolean> {
   const store = await getStore();
   const data = await store.get<PersistedData>("app");
   if (data) {
-    // Always ensure local provider is present (same as loadDefaults)
-    if (data.settings?.localModel?.enabled !== false) {
-      data.providers = ensureLocalProvider(data.providers || []);
-    }
     applySnapshot(data);
     syncLogLevel(data.settings?.logLevel);
     logger.info(
@@ -177,33 +173,6 @@ async function persistNow() {
   }
 }
 
-/// Auto-create local provider from settings.localModel if none exists.
-/// Called after loading defaults, so the local provider appears in both
-/// Tauri and browser modes without hardcoding in default-config.json.
-function ensureLocalProvider(rawProviders: LLMProvider[]) {
-  const settings = useConfigStore.getState().settings;
-  const local = rawProviders.find((p) => p.id === "local");
-  const url = `http://127.0.0.1:${settings.localModel.port}/v1`;
-  const name = `本地模型 (${settings.localModel.activeModel.replace(".gguf", "") || "未选择"})`;
-  if (local) {
-    return rawProviders.map((p) =>
-      p.id === "local" ? { ...p, baseUrl: url, name, apiKey: "local" } : p
-    );
-  }
-  return [
-    {
-      id: "local",
-      name,
-      baseUrl: url,
-      apiKey: "local",
-      models: [],
-      isDefault: false,
-      createdAt: Date.now(),
-    },
-    ...rawProviders,
-  ];
-}
-
 async function loadDefaults() {
   let raw: { providers: LLMProvider[]; settings: AppSettings } | null = null;
 
@@ -231,9 +200,6 @@ async function loadDefaults() {
   }
 
   if (!raw) return;
-
-  // Inject local provider from settings (dynamic, not hardcoded)
-  raw.providers = ensureLocalProvider(raw.providers);
 
   const data: PersistedData = {
     ...raw,
